@@ -1,0 +1,443 @@
+/* CSS Reset & Global Styling */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+
+    min-height:100vh;
+
+    background-color:#f8fafc;
+
+}
+
+.hero-section {
+
+    min-height:100vh;
+
+}
+
+/* Container Split Layout */
+.login-container {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* ----------------------------------------------------
+   LEFT HERO PANEL STYLING
+---------------------------------------------------- */
+.hero-section {
+    flex: 1;
+    background: linear-gradient(135deg, #0b3b8c 0%, #1e52b5 50%, #173d83 100%);
+    color: #ffffff;
+    padding: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Background Tech Pattern Overlay */
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+/* Hero Brand Header */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.brand i {
+    font-size: 1.5rem;
+}
+
+/* Hero Content Area */
+.hero-content {
+    max-width: 480px;
+    margin: auto 0;
+    z-index: 1;
+}
+
+.hero-title {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 20px;
+}
+
+.hero-description {
+    font-size: 1.05rem;
+    color: #dbebe6;
+    opacity: 0.9;
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+/* Feature List */
+.features-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.feature-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+}
+
+/* Hero Footer */
+.hero-footer {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    z-index: 1;
+}
+
+/* ----------------------------------------------------
+   RIGHT FORM PANEL STYLING
+---------------------------------------------------- */
+.form-section {
+    flex: 1;
+    background-color: #f9fafb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    position: relative;
+}
+
+.form-wrapper {
+    width: 100%;
+    max-width: 440px;
+}
+
+.form-header h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.form-header p {
+    color: #6b7280;
+    font-size: 0.95rem;
+    margin-bottom: 30px;
+}
+
+/* Role Selector */
+
+.role-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+
+.role-btn {
+
+    flex: 1;
+
+    padding: 12px 5px;
+
+    border: 1px solid #e5e7eb;
+
+    background-color: #f3f4f6;
+
+    color: #4b5563;
+
+    border-radius: 8px;
+
+    font-size: 0.75rem;
+
+    font-weight: 700;
+
+    text-align: center;
+
+    cursor: pointer;
+
+    transition: all 0.3s ease;
+
+}
+
+
+/* Hide radio buttons */
+
+.role-btn input {
+
+    display:none;
+
+}
+
+
+
+/* Selected role */
+
+.role-btn:has(input:checked)
+
+{
+
+    background-color:#eef2ff;
+
+    border-color:#2563eb;
+
+    color:#2563eb;
+
+}
+
+/* Input Groups */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.forgot-link {
+    font-size: 0.85rem;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper i.input-icon {
+    position: absolute;
+    left: 14px;
+    color: #9ca3af;
+    font-size: 0.95rem;
+}
+
+.input-wrapper i.toggle-password {
+    position: absolute;
+    right: 14px;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 40px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background-color: #f9fafb;
+    color: #111827;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Checkbox Styling */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #2563eb;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    font-size: 0.875rem;
+    color: #4b5563;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+/* Submit Button */
+.btn-submit {
+    width: 100%;
+    padding: 14px;
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-submit:hover {
+    background-color: #1d4ed8;
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 30px 0;
+    color: #9ca3af;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.divider span {
+    padding: 0 15px;
+}
+
+/* Secondary Action Button */
+.btn-secondary {
+    width: 100%;
+    padding: 12px;
+    background-color: #ffffff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    transition: background-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #f3f4f6;
+}
+
+/* Legal / Terms Note */
+.terms-note {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 25px;
+    line-height: 1.5;
+}
+
+.terms-note a {
+    color: #4b5563;
+    text-decoration: underline;
+}
+
+/* Floating Support Widget */
+.chat-widget {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 48px;
+    height: 48px;
+    background-color: #2563eb;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.chat-widget:hover {
+    transform: scale(1.05);
+}
+
+/* Responsive Layout */
+@media(max-width:900px)
+
+{
+
+.login-container{
+
+    flex-direction:column;
+
+}
+
+
+.hero-section{
+
+    min-height:auto;
+
+}
+
+
+.hero-title{
+
+    font-size:2rem;
+
+}
+
+
+.form-section{
+
+    padding:30px 20px;
+
+}
+
+
+}
