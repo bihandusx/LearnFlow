@@ -22,8 +22,8 @@ if(isset($_POST['login']))
 
 
     $query = "SELECT * FROM users 
-              WHERE email='$email' 
-              AND role='$role'";
+              WHERE Email='$email' 
+              AND Role='$role'";
 
 
     $result = mysqli_query($conn,$query);
@@ -38,12 +38,12 @@ if(isset($_POST['login']))
 
         // Password verification
 
-        if(password_verify($password,$user['password']))
+        if(password_verify($password,$user['Password']))
         {
 
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['name'] = $user['fullname'];
-            $_SESSION['role'] = $user['role'];
+            $_SESSION['user_id'] = $user['UserID'];
+            $_SESSION['name'] = $user['Name'];
+            $_SESSION['role'] = $user['Role'];
 
             // Redirect to role-specific dashboard
             if ($role === 'Student') {

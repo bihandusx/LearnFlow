@@ -32,7 +32,7 @@ if(isset($_POST['register']))
 
         // Check existing email
 
-        $check = "SELECT * FROM users WHERE email='$email'";
+        $check = "SELECT * FROM users WHERE Email='$email'";
 
         $result = mysqli_query($conn,$check);
 
@@ -53,7 +53,7 @@ if(isset($_POST['register']))
 
 
             $query = "INSERT INTO users
-            (fullname,email,password,role)
+            (Name, Email, Password, Role)
 
             VALUES
 
