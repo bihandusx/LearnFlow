@@ -126,6 +126,23 @@ INSERT INTO `batch` (`BatchID`, `BatchName`, `StartDate`, `EndDate`, `Status`, `
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `contact_message`
+--
+
+CREATE TABLE `contact_message` (
+  `MessageID` int(11) NOT NULL,
+  `SenderID` int(11) DEFAULT NULL,
+  `RecipientID` int(11) DEFAULT NULL,
+  `StudentID` int(11) DEFAULT NULL,
+  `Subject` varchar(150) DEFAULT NULL,
+  `Body` text DEFAULT NULL,
+  `SentDate` datetime DEFAULT NULL,
+  `InReplyToMessageID` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `course`
 --
 
@@ -496,6 +513,16 @@ ALTER TABLE `batch`
   ADD KEY `CourseID` (`CourseID`);
 
 --
+-- Indexes for table `contact_message`
+--
+ALTER TABLE `contact_message`
+  ADD PRIMARY KEY (`MessageID`),
+  ADD KEY `SenderID` (`SenderID`),
+  ADD KEY `RecipientID` (`RecipientID`),
+  ADD KEY `StudentID` (`StudentID`),
+  ADD KEY `InReplyToMessageID` (`InReplyToMessageID`);
+
+--
 -- Indexes for table `course`
 --
 ALTER TABLE `course`
@@ -677,6 +704,12 @@ ALTER TABLE `batch`
   MODIFY `BatchID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `contact_message`
+--
+ALTER TABLE `contact_message`
+  MODIFY `MessageID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `course`
 --
 ALTER TABLE `course`
@@ -816,6 +849,15 @@ ALTER TABLE `attendance`
 --
 ALTER TABLE `batch`
   ADD CONSTRAINT `batch_ibfk_1` FOREIGN KEY (`CourseID`) REFERENCES `course` (`CourseID`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `contact_message`
+--
+ALTER TABLE `contact_message`
+  ADD CONSTRAINT `contact_message_ibfk_1` FOREIGN KEY (`SenderID`) REFERENCES `users` (`UserID`),
+  ADD CONSTRAINT `contact_message_ibfk_2` FOREIGN KEY (`RecipientID`) REFERENCES `users` (`UserID`),
+  ADD CONSTRAINT `contact_message_ibfk_3` FOREIGN KEY (`StudentID`) REFERENCES `student` (`StudentID`),
+  ADD CONSTRAINT `contact_message_ibfk_4` FOREIGN KEY (`InReplyToMessageID`) REFERENCES `contact_message` (`MessageID`);
 
 --
 -- Constraints for table `course`

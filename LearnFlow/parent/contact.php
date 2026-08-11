@@ -1,3 +1,263 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID, su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function contact_format_date($datetime)
+{
+    $ts = strtotime((string) $datetime);
+    return $ts ? date('d M Y', $ts) : '';
+}
+
+function contact_role_label($role)
+{
+    $role = trim((string) $role);
+    if ($role === 'Admin') {
+        return 'Admin';
+    }
+    if ($role === 'Teacher') {
+        return 'Teacher';
+    }
+    return $role !== '' ? $role : 'Contact';
+}
+
+$parentName = $parent['Name'];
+$parentInitials = parent_initials($parentName);
+
+$contacts = [];
+$allowedRecipientIds = [];
+$messages = [];
+$flashError = '';
+$flashSuccess = '';
+$selectedMessageId = isset($_GET['msg']) ? (int) $_GET['msg'] : 0;
+
+if ($linkedStudent) {
+    $studentId = (int) $linkedStudent['StudentID'];
+
+    // Teachers of enrolled courses (via course.TeacherID)
+    $teacherStmt = $conn->prepare(
+        "SELECT DISTINCT u.UserID, u.Name, u.Role, c.CourseName
+         FROM enrollment e
+         INNER JOIN batch b ON b.BatchID = e.BatchID
+         INNER JOIN course c ON c.CourseID = b.CourseID
+         INNER JOIN teacher t ON t.TeacherID = c.TeacherID
+         INNER JOIN users u ON u.UserID = t.TeacherID
+         WHERE e.StudentID = ?
+           AND c.TeacherID IS NOT NULL
+         ORDER BY u.Name ASC, c.CourseName ASC"
+    );
+    $teacherStmt->bind_param("i", $studentId);
+    $teacherStmt->execute();
+    $teacherResult = $teacherStmt->get_result();
+
+    $teachersById = [];
+    while ($row = $teacherResult->fetch_assoc()) {
+        $uid = (int) $row['UserID'];
+        if (!isset($teachersById[$uid])) {
+            $teachersById[$uid] = [
+                'user_id' => $uid,
+                'name' => $row['Name'],
+                'role' => 'Teacher',
+                'role_label' => 'Teacher',
+                'subtitle' => trim((string) ($row['CourseName'] ?? 'Teacher')),
+                'is_admin' => false,
+            ];
+        } else {
+            $courseName = trim((string) ($row['CourseName'] ?? ''));
+            if ($courseName !== '' && strpos($teachersById[$uid]['subtitle'], $courseName) === false) {
+                $teachersById[$uid]['subtitle'] .= ', ' . $courseName;
+            }
+        }
+        $allowedRecipientIds[$uid] = true;
+    }
+    $teacherStmt->close();
+
+    foreach ($teachersById as $t) {
+        $contacts[] = $t;
+    }
+
+    // All admins
+    $adminResult = $conn->query(
+        "SELECT u.UserID, u.Name, u.Role
+         FROM admin a
+         INNER JOIN users u ON u.UserID = a.AdminID
+         ORDER BY u.Name ASC"
+    );
+    if ($adminResult) {
+        while ($row = $adminResult->fetch_assoc()) {
+            $uid = (int) $row['UserID'];
+            $contacts[] = [
+                'user_id' => $uid,
+                'name' => $row['Name'],
+                'role' => 'Admin',
+                'role_label' => 'Admin',
+                'subtitle' => 'Admin',
+                'is_admin' => true,
+            ];
+            $allowedRecipientIds[$uid] = true;
+        }
+    }
+
+    // Compose / send
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
+        $recipientId = (int) ($_POST['recipient_id'] ?? 0);
+        $subject = trim((string) ($_POST['subject'] ?? ''));
+        $body = trim((string) ($_POST['body'] ?? ''));
+
+        if ($recipientId <= 0 || !isset($allowedRecipientIds[$recipientId])) {
+            $flashError = 'Please select a valid teacher or admin.';
+        } elseif ($subject === '' || $body === '') {
+            $flashError = 'Subject and message are required.';
+        } else {
+            $subjectStore = substr($subject, 0, 150);
+            $ins = $conn->prepare(
+                "INSERT INTO contact_message
+                   (SenderID, RecipientID, StudentID, Subject, Body, SentDate, InReplyToMessageID)
+                 VALUES (?, ?, ?, ?, ?, NOW(), NULL)"
+            );
+            $ins->bind_param("iiiss", $parentId, $recipientId, $studentId, $subjectStore, $body);
+            if ($ins->execute()) {
+                $newId = (int) $conn->insert_id;
+                $ins->close();
+                header('Location: contact.php?msg=' . $newId . '&sent=1');
+                exit();
+            }
+            $flashError = 'Unable to send message. Please try again.';
+            $ins->close();
+        }
+    }
+
+    if (isset($_GET['sent']) && (string) $_GET['sent'] === '1') {
+        $flashSuccess = 'Your message has been sent.';
+    }
+
+    // Root messages for this parent
+    $msgStmt = $conn->prepare(
+        "SELECT m.MessageID, m.Subject, m.Body, m.SentDate, m.RecipientID,
+                ru.Name AS RecipientName, ru.Role AS RecipientRole,
+                (SELECT r.MessageID FROM contact_message r
+                  WHERE r.InReplyToMessageID = m.MessageID
+                  ORDER BY r.SentDate ASC
+                  LIMIT 1) AS ReplyMessageID
+         FROM contact_message m
+         INNER JOIN users ru ON ru.UserID = m.RecipientID
+         WHERE m.SenderID = ?
+           AND m.InReplyToMessageID IS NULL
+         ORDER BY m.SentDate DESC, m.MessageID DESC"
+    );
+    $msgStmt->bind_param("i", $parentId);
+    $msgStmt->execute();
+    $msgResult = $msgStmt->get_result();
+
+    while ($row = $msgResult->fetch_assoc()) {
+        $isReplied = !empty($row['ReplyMessageID']);
+        $messages[] = [
+            'message_id' => (int) $row['MessageID'],
+            'subject' => (string) $row['Subject'],
+            'body' => (string) $row['Body'],
+            'sent_date' => $row['SentDate'],
+            'sent_label' => contact_format_date($row['SentDate']),
+            'recipient_id' => (int) $row['RecipientID'],
+            'recipient_name' => (string) $row['RecipientName'],
+            'recipient_role' => contact_role_label($row['RecipientRole']),
+            'is_replied' => $isReplied,
+            'status_label' => $isReplied ? 'Replied' : 'Sent',
+            'status_class' => $isReplied ? 'status-completed' : 'status-submitted',
+        ];
+    }
+    $msgStmt->close();
+}
+
+$contactCount = count($contacts);
+$messagesSent = count($messages);
+$repliedCount = 0;
+foreach ($messages as $m) {
+    if ($m['is_replied']) {
+        $repliedCount++;
+    }
+}
+
+$selectedMessage = null;
+if ($messages) {
+    if ($selectedMessageId > 0) {
+        foreach ($messages as $m) {
+            if ($m['message_id'] === $selectedMessageId) {
+                $selectedMessage = $m;
+                break;
+            }
+        }
+    }
+    if ($selectedMessage === null) {
+        $selectedMessage = $messages[0];
+        $selectedMessageId = $selectedMessage['message_id'];
+    }
+}
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +615,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +623,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -402,7 +662,13 @@
                     </h1>
 
                     <p>
-                        Send a message to any teacher or the administration office.
+                        <?php if ($linkedStudent): ?>
+                            Send a message about
+                            <?php echo htmlspecialchars($linkedStudent['StudentName'], ENT_QUOTES, 'UTF-8'); ?>
+                            to a teacher or the administration office.
+                        <?php else: ?>
+                            No linked student found for this parent account.
+                        <?php endif; ?>
                     </p>
 
                 </div>
@@ -414,7 +680,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            5
+                            <?php echo (int) $contactCount; ?>
                         </strong>
 
                         <span>
@@ -427,7 +693,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            3
+                            <?php echo (int) $messagesSent; ?>
                         </strong>
 
                         <span>
@@ -440,7 +706,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            2
+                            <?php echo (int) $repliedCount; ?>
                         </strong>
 
                         <span>
@@ -456,266 +722,254 @@
             </div>
 
 
+            <?php if ($flashError !== ''): ?>
+                <p class="contact-flash contact-flash-error">
+                    <?php echo htmlspecialchars($flashError, ENT_QUOTES, 'UTF-8'); ?>
+                </p>
+            <?php endif; ?>
+
+            <?php if ($flashSuccess !== ''): ?>
+                <p class="contact-flash contact-flash-success">
+                    <?php echo htmlspecialchars($flashSuccess, ENT_QUOTES, 'UTF-8'); ?>
+                </p>
+            <?php endif; ?>
+
+
 
             <!-- =================================================
                  CONTENT GRID
+                 Row 1: Compose | Teachers & Admins
+                 Row 2: Message History | Message Details
             ================================================== -->
 
-            <div class="dashboard-grid">
+            <div class="dashboard-grid contact-page-grid">
 
 
-                <!-- LEFT COLUMN -->
+                <!-- COMPOSE MESSAGE -->
 
-                <div>
+                <div
+                    class="dashboard-card"
+                    id="composeCard"
+                >
 
 
-                    <!-- COMPOSE MESSAGE -->
+                    <div class="card-header">
 
-                    <div
-                        class="dashboard-card"
-                        id="composeCard"
-                    >
 
-
-                        <div class="card-header">
-
-
-                            <h3>
-                                Compose Message
-                            </h3>
-
-
-                        </div>
-
-
-
-                        <form id="contactForm">
-
-
-                            <div class="profile-form-grid">
-
-
-                                <!-- RECIPIENT -->
-
-                                <div class="profile-form-group full-width">
-
-
-                                    <label for="recipientSelect">
-                                        To
-                                    </label>
-
-
-                                    <select id="recipientSelect">
-
-                                        <option value="perera-maths">
-                                            Mr. Perera - Combined Mathematics
-                                        </option>
-
-                                        <option value="fernando-chemistry">
-                                            Dr. Fernando - Chemistry
-                                        </option>
-
-                                        <option value="silva-physics">
-                                            Mr. Silva - Physics
-                                        </option>
-
-                                        <option value="perera-english">
-                                            Ms. Perera - General English
-                                        </option>
-
-                                        <option value="admin-office">
-                                            Admin Office
-                                        </option>
-
-                                    </select>
-
-
-                                </div>
-
-
-
-                                <!-- SUBJECT -->
-
-                                <div class="profile-form-group full-width">
-
-
-                                    <label for="messageSubject">
-                                        Subject
-                                    </label>
-
-
-                                    <input
-                                        type="text"
-                                        id="messageSubject"
-                                        placeholder="Enter a subject"
-                                        required
-                                    >
-
-
-                                </div>
-
-
-
-                                <!-- MESSAGE -->
-
-                                <div class="profile-form-group full-width">
-
-
-                                    <label for="messageBody">
-                                        Message
-                                    </label>
-
-
-                                    <textarea
-                                        id="messageBody"
-                                        rows="5"
-                                        placeholder="Type your message here..."
-                                        required
-                                    ></textarea>
-
-
-                                </div>
-
-
-                            </div>
-
-
-
-                            <div class="compose-form-actions">
-
-
-                                <button
-                                    type="submit"
-                                    class="profile-save-btn"
-                                >
-
-                                    <i class="fa-solid fa-paper-plane"></i>
-
-                                    Send Message
-
-                                </button>
-
-
-                            </div>
-
-
-                        </form>
+                        <h3>
+                            Compose Message
+                        </h3>
 
 
                     </div>
 
 
 
-                    <!-- MESSAGE HISTORY -->
+                    <form
+                        id="contactForm"
+                        method="post"
+                        action="contact.php"
+                    >
 
-                    <div class="dashboard-card">
+                        <input
+                            type="hidden"
+                            name="send_message"
+                            value="1"
+                        >
 
 
-                        <div class="card-header">
+                        <div class="profile-form-grid">
 
 
-                            <h3>
-                                Message History
-                            </h3>
+                            <!-- RECIPIENT -->
+
+                            <div class="profile-form-group full-width">
+
+
+                                <label for="recipientSelect">
+                                    To
+                                </label>
+
+
+                                <select
+                                    id="recipientSelect"
+                                    name="recipient_id"
+                                    required
+                                    <?php echo $linkedStudent && $contacts ? '' : 'disabled'; ?>
+                                >
+
+                                    <?php if (!$contacts): ?>
+                                        <option value="">
+                                            No contacts available
+                                        </option>
+                                    <?php else: ?>
+                                        <?php foreach ($contacts as $contact): ?>
+                                            <option value="<?php echo (int) $contact['user_id']; ?>">
+                                                <?php
+                                                echo htmlspecialchars(
+                                                    $contact['name'] . ' — ' . $contact['subtitle'],
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+                                                ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+
+                                </select>
+
+
+                            </div>
+
+
+
+                            <!-- SUBJECT -->
+
+                            <div class="profile-form-group full-width">
+
+
+                                <label for="messageSubject">
+                                    Subject
+                                </label>
+
+
+                                <input
+                                    type="text"
+                                    id="messageSubject"
+                                    name="subject"
+                                    placeholder="Enter a subject"
+                                    maxlength="150"
+                                    required
+                                    <?php echo $linkedStudent && $contacts ? '' : 'disabled'; ?>
+                                >
+
+
+                            </div>
+
+
+
+                            <!-- MESSAGE -->
+
+                            <div class="profile-form-group full-width">
+
+
+                                <label for="messageBody">
+                                    Message
+                                </label>
+
+
+                                <textarea
+                                    id="messageBody"
+                                    name="body"
+                                    rows="5"
+                                    placeholder="Type your message here..."
+                                    required
+                                    <?php echo $linkedStudent && $contacts ? '' : 'disabled'; ?>
+                                ></textarea>
+
+
+                            </div>
 
 
                         </div>
 
 
 
-                        <div class="message-history-item">
+                        <div class="compose-form-actions">
 
 
-                            <div class="message-history-icon">
+                            <button
+                                type="submit"
+                                class="profile-save-btn"
+                                <?php echo $linkedStudent && $contacts ? '' : 'disabled'; ?>
+                            >
 
-                                <i class="fa-solid fa-envelope"></i>
+                                <i class="fa-solid fa-paper-plane"></i>
 
-                            </div>
+                                Send Message
 
-
-                            <div class="message-history-info">
-
-                                <h4>
-                                    Question about Assignment 02
-                                </h4>
-
-                                <p>
-                                    To: Mr. Perera • 30 Jul 2026
-                                </p>
-
-                            </div>
-
-
-                            <span class="status-badge status-completed">
-                                Replied
-                            </span>
+                            </button>
 
 
                         </div>
 
 
-
-                        <div class="message-history-item">
-
-
-                            <div class="message-history-icon">
-
-                                <i class="fa-solid fa-envelope"></i>
-
-                            </div>
+                    </form>
 
 
-                            <div class="message-history-info">
-
-                                <h4>
-                                    Fee Payment Confirmation
-                                </h4>
-
-                                <p>
-                                    To: Admin Office • 25 Jul 2026
-                                </p>
-
-                            </div>
-
-
-                            <span class="status-badge status-submitted">
-                                Sent
-                            </span>
-
-
-                        </div>
+                </div>
 
 
 
-                        <div class="message-history-item">
+                <!-- CONTACT DIRECTORY -->
+
+                <div class="dashboard-card">
 
 
-                            <div class="message-history-icon">
-
-                                <i class="fa-solid fa-envelope"></i>
-
-                            </div>
+                    <div class="card-header">
 
 
-                            <div class="message-history-info">
-
-                                <h4>
-                                    Lab Session Clarification
-                                </h4>
-
-                                <p>
-                                    To: Dr. Fernando • 20 Jul 2026
-                                </p>
-
-                            </div>
+                        <h3>
+                            Teachers & Admins
+                        </h3>
 
 
-                            <span class="status-badge status-completed">
-                                Replied
-                            </span>
+                    </div>
 
 
-                        </div>
+
+                    <div class="contact-directory-list">
+
+
+                        <?php if (!$contacts): ?>
+
+                            <p class="contact-empty-state">
+                                <?php echo $linkedStudent
+                                    ? 'No teachers or admins available yet.'
+                                    : 'Link a student to see contacts.'; ?>
+                            </p>
+
+                        <?php else: ?>
+
+                            <?php foreach ($contacts as $contact): ?>
+
+                                <div class="contact-list-item">
+
+
+                                    <div class="contact-avatar<?php echo $contact['is_admin'] ? ' admin-avatar' : ''; ?>">
+                                        <?php echo htmlspecialchars(parent_initials($contact['name']), ENT_QUOTES, 'UTF-8'); ?>
+                                    </div>
+
+
+                                    <div class="contact-info">
+
+                                        <h4>
+                                            <?php echo htmlspecialchars($contact['name'], ENT_QUOTES, 'UTF-8'); ?>
+                                        </h4>
+
+                                        <p>
+                                            <?php echo htmlspecialchars($contact['subtitle'], ENT_QUOTES, 'UTF-8'); ?>
+                                        </p>
+
+                                    </div>
+
+
+                                    <button
+                                        type="button"
+                                        class="message-btn"
+                                        data-recipient="<?php echo (int) $contact['user_id']; ?>"
+                                    >
+
+                                        Message
+
+                                    </button>
+
+
+                                </div>
+
+                            <?php endforeach; ?>
+
+                        <?php endif; ?>
 
 
                     </div>
@@ -725,214 +979,159 @@
 
 
 
-                <!-- RIGHT COLUMN -->
+                <!-- MESSAGE HISTORY -->
 
-                <div>
+                <div class="dashboard-card">
 
 
-                    <!-- CONTACT DIRECTORY -->
+                    <div class="card-header">
 
-                    <div class="dashboard-card">
 
-
-                        <div class="card-header">
-
-
-                            <h3>
-                                Teachers & Admins
-                            </h3>
-
-
-                        </div>
-
-
-
-                        <div class="contact-directory-list">
-
-
-                            <div class="contact-list-item">
-
-
-                                <div class="contact-avatar">
-                                    MP
-                                </div>
-
-
-                                <div class="contact-info">
-
-                                    <h4>
-                                        Mr. Perera
-                                    </h4>
-
-                                    <p>
-                                        Combined Mathematics
-                                    </p>
-
-                                </div>
-
-
-                                <button
-                                    type="button"
-                                    class="message-btn"
-                                    data-recipient="perera-maths"
-                                >
-
-                                    Message
-
-                                </button>
-
-
-                            </div>
-
-
-
-                            <div class="contact-list-item">
-
-
-                                <div class="contact-avatar">
-                                    DF
-                                </div>
-
-
-                                <div class="contact-info">
-
-                                    <h4>
-                                        Dr. Fernando
-                                    </h4>
-
-                                    <p>
-                                        Chemistry
-                                    </p>
-
-                                </div>
-
-
-                                <button
-                                    type="button"
-                                    class="message-btn"
-                                    data-recipient="fernando-chemistry"
-                                >
-
-                                    Message
-
-                                </button>
-
-
-                            </div>
-
-
-
-                            <div class="contact-list-item">
-
-
-                                <div class="contact-avatar">
-                                    MS
-                                </div>
-
-
-                                <div class="contact-info">
-
-                                    <h4>
-                                        Mr. Silva
-                                    </h4>
-
-                                    <p>
-                                        Physics
-                                    </p>
-
-                                </div>
-
-
-                                <button
-                                    type="button"
-                                    class="message-btn"
-                                    data-recipient="silva-physics"
-                                >
-
-                                    Message
-
-                                </button>
-
-
-                            </div>
-
-
-
-                            <div class="contact-list-item">
-
-
-                                <div class="contact-avatar">
-                                    MP
-                                </div>
-
-
-                                <div class="contact-info">
-
-                                    <h4>
-                                        Ms. Perera
-                                    </h4>
-
-                                    <p>
-                                        General English
-                                    </p>
-
-                                </div>
-
-
-                                <button
-                                    type="button"
-                                    class="message-btn"
-                                    data-recipient="perera-english"
-                                >
-
-                                    Message
-
-                                </button>
-
-
-                            </div>
-
-
-
-                            <div class="contact-list-item">
-
-
-                                <div class="contact-avatar admin-avatar">
-                                    AO
-                                </div>
-
-
-                                <div class="contact-info">
-
-                                    <h4>
-                                        Admin Office
-                                    </h4>
-
-                                    <p>
-                                        Administration
-                                    </p>
-
-                                </div>
-
-
-                                <button
-                                    type="button"
-                                    class="message-btn"
-                                    data-recipient="admin-office"
-                                >
-
-                                    Message
-
-                                </button>
-
-
-                            </div>
-
-
-                        </div>
+                        <h3>
+                            Message History
+                        </h3>
 
 
                     </div>
+
+
+                    <?php if (!$messages): ?>
+
+                        <p class="contact-empty-state">
+                            No messages sent yet.
+                        </p>
+
+                    <?php else: ?>
+
+                        <?php foreach ($messages as $msg): ?>
+
+                            <a
+                                href="contact.php?msg=<?php echo (int) $msg['message_id']; ?>"
+                                class="message-history-item<?php echo $selectedMessageId === $msg['message_id'] ? ' is-selected' : ''; ?>"
+                            >
+
+
+                                <div class="message-history-icon">
+
+                                    <i class="fa-solid fa-envelope"></i>
+
+                                </div>
+
+
+                                <div class="message-history-info">
+
+                                    <h4>
+                                        <?php echo htmlspecialchars($msg['subject'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </h4>
+
+                                    <p>
+                                        To:
+                                        <?php echo htmlspecialchars($msg['recipient_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                        •
+                                        <?php echo htmlspecialchars($msg['sent_label'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </p>
+
+                                </div>
+
+
+                                <span class="status-badge <?php echo htmlspecialchars($msg['status_class'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo htmlspecialchars($msg['status_label'], ENT_QUOTES, 'UTF-8'); ?>
+                                </span>
+
+
+                            </a>
+
+                        <?php endforeach; ?>
+
+                    <?php endif; ?>
+
+
+                </div>
+
+
+
+                <!-- MESSAGE DETAILS -->
+
+                <div
+                    class="dashboard-card"
+                    id="messageDetailCard"
+                >
+
+
+                    <div class="card-header">
+
+
+                        <h3>
+                            Message Details
+                        </h3>
+
+
+                    </div>
+
+
+                    <?php if (!$selectedMessage): ?>
+
+                        <p class="contact-empty-state">
+                            Select a message from history to view details.
+                        </p>
+
+                    <?php else: ?>
+
+                        <div class="message-detail-meta">
+
+                            <div class="message-detail-row">
+                                <span class="message-detail-label">Subject</span>
+                                <span class="message-detail-value">
+                                    <?php echo htmlspecialchars($selectedMessage['subject'], ENT_QUOTES, 'UTF-8'); ?>
+                                </span>
+                            </div>
+
+                            <div class="message-detail-row">
+                                <span class="message-detail-label">To</span>
+                                <span class="message-detail-value">
+                                    <?php
+                                    echo htmlspecialchars(
+                                        $selectedMessage['recipient_name'] . ' (' . $selectedMessage['recipient_role'] . ')',
+                                        ENT_QUOTES,
+                                        'UTF-8'
+                                    );
+                                    ?>
+                                </span>
+                            </div>
+
+                            <div class="message-detail-row">
+                                <span class="message-detail-label">Sent</span>
+                                <span class="message-detail-value">
+                                    <?php echo htmlspecialchars($selectedMessage['sent_label'], ENT_QUOTES, 'UTF-8'); ?>
+                                </span>
+                            </div>
+
+                            <div class="message-detail-row">
+                                <span class="message-detail-label">Status</span>
+                                <span class="message-detail-value">
+                                    <span class="status-badge <?php echo htmlspecialchars($selectedMessage['status_class'], ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($selectedMessage['status_label'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </span>
+                                    <span class="message-detail-status-date">
+                                        •
+                                        <?php echo htmlspecialchars($selectedMessage['sent_label'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </span>
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <div class="message-detail-body">
+
+                            <span class="message-detail-label">Message</span>
+
+                            <p>
+                                <?php echo nl2br(htmlspecialchars($selectedMessage['body'], ENT_QUOTES, 'UTF-8')); ?>
+                            </p>
+
+                        </div>
+
+                    <?php endif; ?>
 
 
                 </div>
@@ -974,10 +1173,6 @@ document.addEventListener(
             document.getElementById("composeCard");
 
 
-        const contactForm =
-            document.getElementById("contactForm");
-
-
         const messageButtons =
             document.querySelectorAll(".message-btn");
 
@@ -1000,6 +1195,11 @@ document.addEventListener(
                             button.getAttribute("data-recipient");
 
 
+                        if (!recipientSelect || recipientSelect.disabled) {
+                            return;
+                        }
+
+
                         recipientSelect.value = recipient;
 
 
@@ -1017,31 +1217,6 @@ document.addEventListener(
 
                     }
                 );
-
-
-            }
-        );
-
-
-
-        /* -------------------------
-           SEND MESSAGE
-        ------------------------- */
-
-        contactForm.addEventListener(
-            "submit",
-            function (event) {
-
-
-                event.preventDefault();
-
-
-                alert(
-                    "Your message has been queued to send! (Frontend demo - will be connected to the backend later.)"
-                );
-
-
-                contactForm.reset();
 
 
             }
