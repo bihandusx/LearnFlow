@@ -1,3 +1,225 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID, su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function assignment_course_slug($courseName)
+{
+    $slug = strtolower(trim((string) $courseName));
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    return trim($slug, '-') ?: 'course';
+}
+
+function assignment_course_icon($courseName)
+{
+    $name = strtolower((string) $courseName);
+
+    if (strpos($name, 'math') !== false) {
+        return 'fa-calculator';
+    }
+    if (strpos($name, 'physics') !== false) {
+        return 'fa-atom';
+    }
+    if (strpos($name, 'chemistry') !== false) {
+        return 'fa-flask';
+    }
+    if (strpos($name, 'english') !== false) {
+        return 'fa-language';
+    }
+    if (strpos($name, 'web') !== false || strpos($name, 'develop') !== false) {
+        return 'fa-code';
+    }
+
+    return 'fa-book';
+}
+
+function assignment_first_name($fullName)
+{
+    $parts = preg_split('/\s+/', trim((string) $fullName));
+    return !empty($parts[0]) ? $parts[0] : 'Student';
+}
+
+function assignment_format_date($date)
+{
+    if ($date === null || $date === '') {
+        return '—';
+    }
+    $ts = strtotime((string) $date);
+    return $ts ? date('d M Y', $ts) : '—';
+}
+
+/**
+ * Compute status + late flag from submission and due date.
+ *
+ * @return array{status:string,label:string,is_late:bool}
+ */
+function assignment_derive_status($dueDate, $submittedDate, $marks)
+{
+    $today = date('Y-m-d');
+    $hasSubmission = $submittedDate !== null && $submittedDate !== '';
+    $isLate = false;
+
+    if ($hasSubmission && $dueDate !== null && $dueDate !== '' && $submittedDate > $dueDate) {
+        $isLate = true;
+    }
+
+    if ($hasSubmission) {
+        if ($marks === null || $marks === '') {
+            return ['status' => 'submitted', 'label' => 'Submitted', 'is_late' => $isLate];
+        }
+        return ['status' => 'graded', 'label' => 'Graded', 'is_late' => $isLate];
+    }
+
+    if ($dueDate !== null && $dueDate !== '' && $dueDate < $today) {
+        return ['status' => 'overdue', 'label' => 'Overdue', 'is_late' => false];
+    }
+
+    return ['status' => 'pending', 'label' => 'Pending', 'is_late' => false];
+}
+
+$parentName = $parent['Name'];
+$parentInitials = parent_initials($parentName);
+
+$studentFirstName = 'Student';
+$assignments = [];
+$courseOptions = [];
+$countTotal = 0;
+$countPending = 0;
+$countOverdue = 0;
+$countGraded = 0;
+
+if ($linkedStudent) {
+    $studentId = (int) $linkedStudent['StudentID'];
+    $studentFirstName = assignment_first_name($linkedStudent['StudentName']);
+
+    $assignStmt = $conn->prepare(
+        "SELECT t.TestID, t.Title, t.OpenDate, t.TotalMarks,
+                a.DueDate, a.AllowLateSubmission,
+                c.CourseID, c.CourseName,
+                s.SubmittedDate, s.Marks
+         FROM assignment a
+         INNER JOIN test t ON t.TestID = a.TestID
+         INNER JOIN batch b ON b.BatchID = t.BatchID
+         INNER JOIN course c ON c.CourseID = b.CourseID
+         INNER JOIN enrollment e ON e.BatchID = b.BatchID AND e.StudentID = ?
+         LEFT JOIN assignment_submission s
+           ON s.TestID = a.TestID AND s.StudentID = ?
+         ORDER BY a.DueDate ASC, t.Title ASC"
+    );
+    $assignStmt->bind_param("ii", $studentId, $studentId);
+    $assignStmt->execute();
+    $assignResult = $assignStmt->get_result();
+
+    while ($row = $assignResult->fetch_assoc()) {
+        $derived = assignment_derive_status(
+            $row['DueDate'],
+            $row['SubmittedDate'],
+            $row['Marks']
+        );
+
+        $totalMarks = (int) ($row['TotalMarks'] ?? 0);
+        $scorePct = null;
+        if ($derived['status'] === 'graded' && $totalMarks > 0 && $row['Marks'] !== null) {
+            $scorePct = (int) round(((int) $row['Marks'] / $totalMarks) * 100);
+        }
+
+        $courseSlug = assignment_course_slug($row['CourseName']);
+        $courseOptions[$courseSlug] = $row['CourseName'];
+
+        $assignments[] = [
+            'title' => $row['Title'],
+            'course_name' => $row['CourseName'],
+            'course_slug' => $courseSlug,
+            'course_icon' => assignment_course_icon($row['CourseName']),
+            'open_date' => $row['OpenDate'],
+            'due_date' => $row['DueDate'],
+            'submitted_date' => $row['SubmittedDate'],
+            'allow_late' => (int) $row['AllowLateSubmission'] === 1,
+            'status' => $derived['status'],
+            'status_label' => $derived['label'],
+            'is_late' => $derived['is_late'],
+            'score_pct' => $scorePct,
+        ];
+
+        $countTotal++;
+        if ($derived['status'] === 'pending') {
+            $countPending++;
+        } elseif ($derived['status'] === 'overdue') {
+            $countOverdue++;
+        } elseif ($derived['status'] === 'graded') {
+            $countGraded++;
+        }
+    }
+
+    $assignStmt->close();
+    asort($courseOptions);
+}
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +577,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +585,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -398,7 +620,7 @@
                 <div>
 
                     <h1>
-                        Alex's Assignments
+                        <?php echo htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8'); ?>'s Assignments
                     </h1>
 
                     <p>
@@ -414,7 +636,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            6
+                            <?php echo (int) $countTotal; ?>
                         </strong>
 
                         <span>
@@ -427,7 +649,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            2
+                            <?php echo (int) $countPending; ?>
                         </strong>
 
                         <span>
@@ -440,7 +662,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            1
+                            <?php echo (int) $countOverdue; ?>
                         </strong>
 
                         <span>
@@ -453,7 +675,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            3
+                            <?php echo (int) $countGraded; ?>
                         </strong>
 
                         <span>
@@ -468,6 +690,29 @@
 
             </div>
 
+
+
+            <?php if (!$linkedStudent): ?>
+
+                <div
+                    id="noAssignments"
+                    class="no-assignments"
+                    style="display: flex;"
+                >
+
+                    <i class="fa-solid fa-folder-open"></i>
+
+                    <h3>
+                        No Student Linked
+                    </h3>
+
+                    <p>
+                        Link a student to your parent account to view assignments.
+                    </p>
+
+                </div>
+
+            <?php else: ?>
 
 
             <!-- SEARCH AND FILTERS -->
@@ -501,21 +746,11 @@
                         All Courses
                     </option>
 
-                    <option value="mathematics">
-                        Combined Mathematics
-                    </option>
-
-                    <option value="physics">
-                        Physics
-                    </option>
-
-                    <option value="chemistry">
-                        Chemistry
-                    </option>
-
-                    <option value="english">
-                        General English
-                    </option>
+                    <?php foreach ($courseOptions as $slug => $name): ?>
+                        <option value="<?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
+                    <?php endforeach; ?>
 
                 </select>
 
@@ -560,386 +795,107 @@
                 id="assignmentsGrid"
             >
 
+                <?php foreach ($assignments as $item): ?>
 
-                <!-- ASSIGNMENT 1 -->
-
-                <div
-                    class="assignment-card"
-                    data-course="mathematics"
-                    data-status="pending"
-                    data-title="Calculus Assignment 02"
-                >
-
-
-                    <div class="assignment-card-top">
-
-                        <div class="assignment-type-icon">
-
-                            <i class="fa-solid fa-file-pen"></i>
-
-                        </div>
-
-                        <span class="status-badge status-pending">
-                            Pending
-                        </span>
-
-                    </div>
+                    <div
+                        class="assignment-card"
+                        data-course="<?php echo htmlspecialchars($item['course_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-status="<?php echo htmlspecialchars($item['status'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-title="<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>"
+                    >
 
 
-                    <div class="assignment-card-body">
+                        <div class="assignment-card-top">
 
-                        <h3>
-                            Calculus Assignment 02
-                        </h3>
+                            <div class="assignment-type-icon">
 
-                        <p class="assignment-course">
+                                <i class="fa-solid fa-file-pen"></i>
 
-                            <i class="fa-solid fa-calculator"></i>
+                            </div>
 
-                            Combined Mathematics
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;">
 
-                        </p>
+                                <span class="status-badge status-<?php echo htmlspecialchars($item['status'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo htmlspecialchars($item['status_label'], ENT_QUOTES, 'UTF-8'); ?>
+                                </span>
 
-                        <p class="assignment-due">
+                                <?php if ($item['is_late']): ?>
+                                    <span class="status-badge status-late">
+                                        Late
+                                    </span>
+                                <?php endif; ?>
 
-                            <i class="fa-regular fa-calendar"></i>
-
-                            Due: 15 Aug 2026
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="assignment-card-footer">
-
-                        <span class="assignment-score">
-                            <span>Awaiting Submission</span>
-                        </span>
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ASSIGNMENT 2 -->
-
-                <div
-                    class="assignment-card"
-                    data-course="chemistry"
-                    data-status="pending"
-                    data-title="Organic Chemistry Worksheet"
-                >
-
-
-                    <div class="assignment-card-top">
-
-                        <div class="assignment-type-icon">
-
-                            <i class="fa-solid fa-file-pen"></i>
+                            </div>
 
                         </div>
 
-                        <span class="status-badge status-pending">
-                            Pending
-                        </span>
 
-                    </div>
+                        <div class="assignment-card-body">
 
+                            <h3>
+                                <?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>
+                            </h3>
 
-                    <div class="assignment-card-body">
+                            <p class="assignment-course">
 
-                        <h3>
-                            Organic Chemistry Worksheet
-                        </h3>
+                                <i class="fa-solid <?php echo htmlspecialchars($item['course_icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
 
-                        <p class="assignment-course">
+                                <?php echo htmlspecialchars($item['course_name'], ENT_QUOTES, 'UTF-8'); ?>
 
-                            <i class="fa-solid fa-flask"></i>
+                            </p>
 
-                            Chemistry
+                            <p class="assignment-due">
 
-                        </p>
+                                <i class="fa-regular fa-calendar"></i>
 
-                        <p class="assignment-due">
+                                <?php if ($item['submitted_date']): ?>
+                                    Submitted: <?php echo htmlspecialchars(assignment_format_date($item['submitted_date']), ENT_QUOTES, 'UTF-8'); ?>
+                                <?php else: ?>
+                                    Due: <?php echo htmlspecialchars(assignment_format_date($item['due_date']), ENT_QUOTES, 'UTF-8'); ?>
+                                <?php endif; ?>
 
-                            <i class="fa-regular fa-calendar"></i>
+                            </p>
 
-                            Due: 18 Aug 2026
+                            <p class="assignment-due">
 
-                        </p>
+                                <i class="fa-regular fa-clock"></i>
 
-                    </div>
+                                Opened: <?php echo htmlspecialchars(assignment_format_date($item['open_date']), ENT_QUOTES, 'UTF-8'); ?>
 
+                            </p>
 
-                    <div class="assignment-card-footer">
+                            <p class="assignment-due">
 
-                        <span class="assignment-score">
-                            <span>Awaiting Submission</span>
-                        </span>
+                                <i class="fa-solid fa-hourglass-half"></i>
 
-                    </div>
+                                Late submissions: <?php echo $item['allow_late'] ? 'Allowed' : 'Not allowed'; ?>
 
-
-                </div>
-
-
-
-                <!-- ASSIGNMENT 3 -->
-
-                <div
-                    class="assignment-card"
-                    data-course="physics"
-                    data-status="overdue"
-                    data-title="Mechanics Problem Set"
-                >
-
-
-                    <div class="assignment-card-top">
-
-                        <div class="assignment-type-icon">
-
-                            <i class="fa-solid fa-file-pen"></i>
+                            </p>
 
                         </div>
 
-                        <span class="status-badge status-overdue">
-                            Overdue
-                        </span>
 
-                    </div>
+                        <div class="assignment-card-footer">
 
-
-                    <div class="assignment-card-body">
-
-                        <h3>
-                            Mechanics Problem Set
-                        </h3>
-
-                        <p class="assignment-course">
-
-                            <i class="fa-solid fa-atom"></i>
-
-                            Physics
-
-                        </p>
-
-                        <p class="assignment-due">
-
-                            <i class="fa-regular fa-calendar"></i>
-
-                            Due: 05 Aug 2026
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="assignment-card-footer">
-
-                        <span class="assignment-score">
-                            <span>Not Submitted</span>
-                        </span>
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ASSIGNMENT 4 -->
-
-                <div
-                    class="assignment-card"
-                    data-course="english"
-                    data-status="graded"
-                    data-title="Essay - My Favourite Book"
-                >
-
-
-                    <div class="assignment-card-top">
-
-                        <div class="assignment-type-icon">
-
-                            <i class="fa-solid fa-file-pen"></i>
+                            <span class="assignment-score">
+                                <?php if ($item['status'] === 'graded' && $item['score_pct'] !== null): ?>
+                                    <?php echo (int) $item['score_pct']; ?>%
+                                    <span>Score</span>
+                                <?php elseif ($item['status'] === 'submitted'): ?>
+                                    <span>Submitted — awaiting grade</span>
+                                <?php elseif ($item['status'] === 'overdue'): ?>
+                                    <span>Not Submitted</span>
+                                <?php else: ?>
+                                    <span>Awaiting Submission</span>
+                                <?php endif; ?>
+                            </span>
 
                         </div>
 
-                        <span class="status-badge status-graded">
-                            Graded
-                        </span>
 
                     </div>
 
-
-                    <div class="assignment-card-body">
-
-                        <h3>
-                            Essay - My Favourite Book
-                        </h3>
-
-                        <p class="assignment-course">
-
-                            <i class="fa-solid fa-language"></i>
-
-                            General English
-
-                        </p>
-
-                        <p class="assignment-due">
-
-                            <i class="fa-regular fa-calendar"></i>
-
-                            Submitted: 28 Jul 2026
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="assignment-card-footer">
-
-                        <span class="assignment-score">
-                            85%
-                            <span>Score</span>
-                        </span>
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ASSIGNMENT 5 -->
-
-                <div
-                    class="assignment-card"
-                    data-course="mathematics"
-                    data-status="graded"
-                    data-title="Integration Practice Sheet"
-                >
-
-
-                    <div class="assignment-card-top">
-
-                        <div class="assignment-type-icon">
-
-                            <i class="fa-solid fa-file-pen"></i>
-
-                        </div>
-
-                        <span class="status-badge status-graded">
-                            Graded
-                        </span>
-
-                    </div>
-
-
-                    <div class="assignment-card-body">
-
-                        <h3>
-                            Integration Practice Sheet
-                        </h3>
-
-                        <p class="assignment-course">
-
-                            <i class="fa-solid fa-calculator"></i>
-
-                            Combined Mathematics
-
-                        </p>
-
-                        <p class="assignment-due">
-
-                            <i class="fa-regular fa-calendar"></i>
-
-                            Submitted: 20 Jul 2026
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="assignment-card-footer">
-
-                        <span class="assignment-score">
-                            92%
-                            <span>Score</span>
-                        </span>
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ASSIGNMENT 6 -->
-
-                <div
-                    class="assignment-card"
-                    data-course="chemistry"
-                    data-status="graded"
-                    data-title="Titration Lab Report"
-                >
-
-
-                    <div class="assignment-card-top">
-
-                        <div class="assignment-type-icon">
-
-                            <i class="fa-solid fa-file-pen"></i>
-
-                        </div>
-
-                        <span class="status-badge status-graded">
-                            Graded
-                        </span>
-
-                    </div>
-
-
-                    <div class="assignment-card-body">
-
-                        <h3>
-                            Titration Lab Report
-                        </h3>
-
-                        <p class="assignment-course">
-
-                            <i class="fa-solid fa-flask"></i>
-
-                            Chemistry
-
-                        </p>
-
-                        <p class="assignment-due">
-
-                            <i class="fa-regular fa-calendar"></i>
-
-                            Submitted: 15 Jul 2026
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="assignment-card-footer">
-
-                        <span class="assignment-score">
-                            78%
-                            <span>Score</span>
-                        </span>
-
-                    </div>
-
-
-                </div>
-
+                <?php endforeach; ?>
 
             </div>
 
@@ -950,6 +906,7 @@
             <div
                 id="noAssignments"
                 class="no-assignments"
+                <?php if (count($assignments) === 0): ?>style="display: flex;"<?php endif; ?>
             >
 
                 <i class="fa-solid fa-folder-open"></i>
@@ -959,10 +916,17 @@
                 </h3>
 
                 <p>
-                    Try changing your search or filter options.
+                    <?php if (count($assignments) === 0): ?>
+                        No assignments are available for this student yet.
+                    <?php else: ?>
+                        Try changing your search or filter options.
+                    <?php endif; ?>
                 </p>
 
             </div>
+
+
+            <?php endif; ?>
 
 
         </section>
@@ -973,9 +937,6 @@
 
 </div>
 
-
-
-<!-- Parent JavaScript -->
 
 <script src="../js/parent.js"></script>
 
@@ -1010,6 +971,11 @@ document.addEventListener(
             document.getElementById("noAssignments");
 
 
+        if (!searchInput || !courseFilter || !statusFilter) {
+            return;
+        }
+
+
 
         function filterAssignments() {
 
@@ -1037,8 +1003,7 @@ document.addEventListener(
 
 
                     const title =
-                        card
-                            .getAttribute("data-title")
+                        (card.getAttribute("data-title") || "")
                             .toLowerCase();
 
 
@@ -1088,17 +1053,18 @@ document.addEventListener(
             );
 
 
+            if (noAssignments) {
+                if (visibleCount === 0) {
 
-            if (visibleCount === 0) {
+                    noAssignments.style.display = "flex";
 
-                noAssignments.style.display = "flex";
+                }
 
-            }
+                else {
 
-            else {
+                    noAssignments.style.display = "none";
 
-                noAssignments.style.display = "none";
-
+                }
             }
 
 

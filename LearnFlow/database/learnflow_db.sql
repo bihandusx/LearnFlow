@@ -472,6 +472,7 @@ ALTER TABLE `assignment`
 --
 ALTER TABLE `assignment_submission`
   ADD PRIMARY KEY (`SubmissionID`),
+  ADD UNIQUE KEY `student_assignment` (`StudentID`,`TestID`),
   ADD KEY `StudentID` (`StudentID`),
   ADD KEY `TestID` (`TestID`);
 
