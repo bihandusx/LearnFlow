@@ -1,3 +1,284 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID, su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function progress_course_icon($courseName)
+{
+    $name = strtolower((string) $courseName);
+
+    if (strpos($name, 'math') !== false) {
+        return 'fa-calculator';
+    }
+    if (strpos($name, 'physics') !== false) {
+        return 'fa-atom';
+    }
+    if (strpos($name, 'chemistry') !== false) {
+        return 'fa-flask';
+    }
+    if (strpos($name, 'english') !== false) {
+        return 'fa-language';
+    }
+    if (strpos($name, 'web') !== false || strpos($name, 'develop') !== false) {
+        return 'fa-code';
+    }
+
+    return 'fa-book';
+}
+
+function progress_first_name($fullName)
+{
+    $parts = preg_split('/\s+/', trim((string) $fullName));
+    return !empty($parts[0]) ? $parts[0] : 'Student';
+}
+
+/**
+ * Standard letter grade from marks out of 100.
+ * A >= 90, B+ >= 80, B >= 70, C+ >= 65, C >= 55, S >= 40, F < 40
+ */
+function progress_marks_to_grade($marks)
+{
+    $marks = (int) round((float) $marks);
+
+    if ($marks >= 90) {
+        return 'A';
+    }
+    if ($marks >= 80) {
+        return 'B+';
+    }
+    if ($marks >= 70) {
+        return 'B';
+    }
+    if ($marks >= 65) {
+        return 'C+';
+    }
+    if ($marks >= 55) {
+        return 'C';
+    }
+    if ($marks >= 40) {
+        return 'S';
+    }
+    return 'F';
+}
+
+function progress_short_exam_title($title)
+{
+    $title = trim((string) $title);
+    if (strcasecmp($title, 'Mid-Term Examination') === 0) {
+        return 'Mid-Term';
+    }
+    return $title !== '' ? $title : 'Exam';
+}
+
+function progress_trend_from_scores(array $scores)
+{
+    $scored = array_values(array_filter($scores, static function ($v) {
+        return $v !== null;
+    }));
+
+    if (count($scored) < 2) {
+        return ['label' => 'Stable', 'slug' => 'stable', 'icon' => 'fa-minus'];
+    }
+
+    $first = (int) $scored[0];
+    $last = (int) $scored[count($scored) - 1];
+
+    if ($last > $first) {
+        return ['label' => 'Improving', 'slug' => 'up', 'icon' => 'fa-arrow-trend-up'];
+    }
+    if ($last < $first) {
+        return ['label' => 'Declining', 'slug' => 'down', 'icon' => 'fa-arrow-trend-down'];
+    }
+
+    return ['label' => 'Stable', 'slug' => 'stable', 'icon' => 'fa-minus'];
+}
+
+$parentName = $parent['Name'];
+$parentInitials = parent_initials($parentName);
+
+$studentFirstName = 'Student';
+$trendRows = [];
+$columnTitles = ['Test 1', 'Test 2', 'Mid-Term'];
+$allMarks = [];
+$improvingCount = 0;
+$needsAttentionCount = 0;
+$averageGrade = '—';
+$hasExamData = false;
+
+if ($linkedStudent) {
+    $studentId = (int) $linkedStudent['StudentID'];
+    $studentFirstName = progress_first_name($linkedStudent['StudentName']);
+
+    $examStmt = $conn->prepare(
+        "SELECT c.CourseID, c.CourseName, t.Title, t.TotalMarks,
+                e.ExamDate, er.Marks, er.Grade
+         FROM exam_result er
+         INNER JOIN exam e ON e.TestID = er.TestID
+         INNER JOIN test t ON t.TestID = e.TestID
+         INNER JOIN batch b ON b.BatchID = t.BatchID
+         INNER JOIN course c ON c.CourseID = b.CourseID
+         WHERE er.StudentID = ?
+         ORDER BY c.CourseName ASC, e.ExamDate ASC, t.TestID ASC"
+    );
+    $examStmt->bind_param("i", $studentId);
+    $examStmt->execute();
+    $examResult = $examStmt->get_result();
+
+    $byCourse = [];
+    while ($row = $examResult->fetch_assoc()) {
+        $courseId = (int) $row['CourseID'];
+        if (!isset($byCourse[$courseId])) {
+            $byCourse[$courseId] = [
+                'course_name' => $row['CourseName'],
+                'exams' => [],
+            ];
+        }
+
+        $total = (int) ($row['TotalMarks'] ?? 100);
+        if ($total <= 0) {
+            $total = 100;
+        }
+        $marks = $row['Marks'] !== null ? (int) $row['Marks'] : null;
+        if ($marks !== null) {
+            // Normalize to out-of-100 for display when TotalMarks differs
+            $pct = (int) round(($marks / $total) * 100);
+            $allMarks[] = $pct;
+        }
+
+        $byCourse[$courseId]['exams'][] = [
+            'title' => $row['Title'],
+            'marks' => $marks !== null ? (int) round(($marks / $total) * 100) : null,
+            'exam_date' => $row['ExamDate'],
+        ];
+    }
+    $examStmt->close();
+
+    foreach ($byCourse as $course) {
+        $exams = $course['exams'];
+        $lastThree = array_slice($exams, -3);
+        if (count($lastThree) === 0) {
+            continue;
+        }
+
+        $scores = [];
+        $titles = [];
+        foreach ($lastThree as $exam) {
+            $scores[] = $exam['marks'];
+            $titles[] = progress_short_exam_title($exam['title']);
+        }
+
+        while (count($scores) < 3) {
+            $scores[] = null;
+            $titles[] = '—';
+        }
+
+        $trend = progress_trend_from_scores($scores);
+        if ($trend['label'] === 'Improving') {
+            $improvingCount++;
+        } elseif ($trend['label'] === 'Declining') {
+            $needsAttentionCount++;
+        }
+
+        $trendRows[] = [
+            'course_name' => $course['course_name'],
+            'course_icon' => progress_course_icon($course['course_name']),
+            'scores' => $scores,
+            'titles' => $titles,
+            'trend' => $trend,
+        ];
+    }
+
+    if (!empty($trendRows)) {
+        $hasExamData = true;
+        // Prefer column headers from a row that has three titled exams
+        foreach ($trendRows as $row) {
+            $usable = true;
+            foreach ($row['titles'] as $t) {
+                if ($t === '—') {
+                    $usable = false;
+                    break;
+                }
+            }
+            if ($usable) {
+                $columnTitles = $row['titles'];
+                break;
+            }
+        }
+    }
+
+    if (count($allMarks) > 0) {
+        $mean = array_sum($allMarks) / count($allMarks);
+        $averageGrade = progress_marks_to_grade($mean);
+    }
+}
+
+$pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Academic Progress";
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -150,7 +431,7 @@
                 class="nav-link"
             >
 
-                <i class="fa-solid fa-award"></i>
+                <i class="fa-solid fa-square-poll-vertical"></i>
 
                 <span>Examination Results</span>
 
@@ -193,9 +474,9 @@
                 class="nav-link"
             >
 
-                <i class="fa-solid fa-comments"></i>
+                <i class="fa-solid fa-envelope"></i>
 
-                <span>Contact Teachers/Admins</span>
+                <span>Contact Teachers</span>
 
             </a>
 
@@ -320,7 +601,7 @@
                         <h2>Academic Progress</h2>
 
                         <p>
-                            Track your child's academic performance across all subjects.
+                            Track your child's academic performance across all courses.
                         </p>
 
                     </div>
@@ -355,7 +636,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +644,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -398,7 +679,7 @@
                 <div>
 
                     <h1>
-                        Alex's Academic Progress
+                        <?php echo $pageTitle; ?>
                     </h1>
 
                     <p>
@@ -427,7 +708,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            B+
+                            <?php echo htmlspecialchars($averageGrade, ENT_QUOTES, 'UTF-8'); ?>
                         </strong>
 
                         <span>
@@ -440,7 +721,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            3
+                            <?php echo (int) $improvingCount; ?>
                         </strong>
 
                         <span>
@@ -453,7 +734,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            1
+                            <?php echo (int) $needsAttentionCount; ?>
                         </strong>
 
                         <span>
@@ -471,7 +752,7 @@
 
 
             <!-- =================================================
-                 COURSE PROGRESS OVERVIEW
+                 COURSE PROGRESS OVERVIEW (static — formula deferred)
             ================================================== -->
 
             <div class="progress-section">
@@ -741,7 +1022,7 @@
 
 
             <!-- =================================================
-                 PERFORMANCE TREND
+                 PERFORMANCE TREND (live)
             ================================================== -->
 
             <div class="progress-section">
@@ -774,6 +1055,20 @@
 
                     <div class="performance-table-card">
 
+                        <?php if (!$linkedStudent): ?>
+
+                            <p>
+                                No linked student found for this parent account.
+                            </p>
+
+                        <?php elseif (!$hasExamData): ?>
+
+                            <p>
+                                No exam results available yet for
+                                <?php echo htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8'); ?>.
+                            </p>
+
+                        <?php else: ?>
 
                         <table class="performance-table">
 
@@ -784,11 +1079,11 @@
 
                                     <th>Course</th>
 
-                                    <th>Test 1</th>
-
-                                    <th>Test 2</th>
-
-                                    <th>Mid-Term</th>
+                                    <?php foreach ($columnTitles as $colTitle): ?>
+                                        <th>
+                                            <?php echo htmlspecialchars($colTitle, ENT_QUOTES, 'UTF-8'); ?>
+                                        </th>
+                                    <?php endforeach; ?>
 
                                     <th>Trend</th>
 
@@ -799,6 +1094,7 @@
 
                             <tbody>
 
+                                <?php foreach ($trendRows as $row): ?>
 
                                 <tr>
 
@@ -806,27 +1102,31 @@
 
                                         <span class="performance-course">
 
-                                            <i class="fa-solid fa-calculator"></i>
+                                            <i class="fa-solid <?php echo htmlspecialchars($row['course_icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
 
-                                            Combined Mathematics
+                                            <?php echo htmlspecialchars($row['course_name'], ENT_QUOTES, 'UTF-8'); ?>
 
                                         </span>
 
                                     </td>
 
-                                    <td>72%</td>
-
-                                    <td>78%</td>
-
-                                    <td>80%</td>
+                                    <?php foreach ($row['scores'] as $score): ?>
+                                        <td>
+                                            <?php
+                                            echo $score === null
+                                                ? '—'
+                                                : htmlspecialchars((string) $score, ENT_QUOTES, 'UTF-8') . '%';
+                                            ?>
+                                        </td>
+                                    <?php endforeach; ?>
 
                                     <td>
 
-                                        <span class="trend-indicator trend-up">
+                                        <span class="trend-indicator trend-<?php echo htmlspecialchars($row['trend']['slug'], ENT_QUOTES, 'UTF-8'); ?>">
 
-                                            <i class="fa-solid fa-arrow-trend-up"></i>
+                                            <i class="fa-solid <?php echo htmlspecialchars($row['trend']['icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
 
-                                            Improving
+                                            <?php echo htmlspecialchars($row['trend']['label'], ENT_QUOTES, 'UTF-8'); ?>
 
                                         </span>
 
@@ -834,116 +1134,14 @@
 
                                 </tr>
 
-
-                                <tr>
-
-                                    <td>
-
-                                        <span class="performance-course">
-
-                                            <i class="fa-solid fa-flask"></i>
-
-                                            Chemistry
-
-                                        </span>
-
-                                    </td>
-
-                                    <td>70%</td>
-
-                                    <td>66%</td>
-
-                                    <td>65%</td>
-
-                                    <td>
-
-                                        <span class="trend-indicator trend-down">
-
-                                            <i class="fa-solid fa-arrow-trend-down"></i>
-
-                                            Declining
-
-                                        </span>
-
-                                    </td>
-
-                                </tr>
-
-
-                                <tr>
-
-                                    <td>
-
-                                        <span class="performance-course">
-
-                                            <i class="fa-solid fa-atom"></i>
-
-                                            Physics
-
-                                        </span>
-
-                                    </td>
-
-                                    <td>68%</td>
-
-                                    <td>70%</td>
-
-                                    <td>72%</td>
-
-                                    <td>
-
-                                        <span class="trend-indicator trend-up">
-
-                                            <i class="fa-solid fa-arrow-trend-up"></i>
-
-                                            Improving
-
-                                        </span>
-
-                                    </td>
-
-                                </tr>
-
-
-                                <tr>
-
-                                    <td>
-
-                                        <span class="performance-course">
-
-                                            <i class="fa-solid fa-language"></i>
-
-                                            General English
-
-                                        </span>
-
-                                    </td>
-
-                                    <td>88%</td>
-
-                                    <td>90%</td>
-
-                                    <td>91%</td>
-
-                                    <td>
-
-                                        <span class="trend-indicator trend-stable">
-
-                                            <i class="fa-solid fa-minus"></i>
-
-                                            Stable
-
-                                        </span>
-
-                                    </td>
-
-                                </tr>
-
+                                <?php endforeach; ?>
 
                             </tbody>
 
 
                         </table>
+
+                        <?php endif; ?>
 
 
                     </div>
@@ -957,7 +1155,7 @@
 
 
             <!-- =================================================
-                 TEACHER REMARKS
+                 TEACHER REMARKS 
             ================================================== -->
 
             <div class="progress-section">
