@@ -1,3 +1,196 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+$successMessage = '';
+$errorMessage = '';
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$allowedRelationships = array('Father', 'Mother', 'Guardian');
+
+if (isset($_POST['save_profile'])) {
+    $fullName = trim($_POST['fullName'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    $nic = trim($_POST['nic'] ?? '');
+    $relationship = trim($_POST['relationship'] ?? '');
+
+    if ($fullName === '' || $email === '') {
+        $errorMessage = "Full name and email are required.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errorMessage = "Please enter a valid email address.";
+    } elseif ($relationship !== '' && !in_array($relationship, $allowedRelationships, true)) {
+        $errorMessage = "Invalid relationship selected.";
+    } else {
+        $emailCheck = $conn->prepare(
+            "SELECT UserID FROM users WHERE Email = ? AND UserID <> ?"
+        );
+        $emailCheck->bind_param("si", $email, $parentId);
+        $emailCheck->execute();
+        $emailResult = $emailCheck->get_result();
+
+        if ($emailResult && $emailResult->num_rows > 0) {
+            $errorMessage = "That email is already in use by another account.";
+            $emailCheck->close();
+        } else {
+            $emailCheck->close();
+
+            $updateUser = $conn->prepare(
+                "UPDATE users
+                 SET Name = ?, Email = ?, Phone = ?, Address = ?
+                 WHERE UserID = ? AND Role = 'Parent'"
+            );
+            $updateUser->bind_param(
+                "ssssi",
+                $fullName,
+                $email,
+                $phone,
+                $address,
+                $parentId
+            );
+
+            $updateNic = $conn->prepare(
+                "UPDATE parent SET NIC = ? WHERE ParentID = ?"
+            );
+            $updateNic->bind_param("si", $nic, $parentId);
+
+            $userOk = $updateUser->execute();
+            $nicOk = $updateNic->execute();
+            $updateUser->close();
+            $updateNic->close();
+
+            if (!$userOk || !$nicOk) {
+                $errorMessage = "Could not save profile changes. Please try again.";
+            } else {
+                $linkStmt = $conn->prepare(
+                    "SELECT StudentID
+                     FROM parent_student
+                     WHERE ParentID = ?
+                     LIMIT 1"
+                );
+                $linkStmt->bind_param("i", $parentId);
+                $linkStmt->execute();
+                $linkResult = $linkStmt->get_result();
+                $linkRow = $linkResult ? $linkResult->fetch_assoc() : null;
+                $linkStmt->close();
+
+                if ($linkRow && $relationship !== '') {
+                    $studentId = (int) $linkRow['StudentID'];
+                    $updateRel = $conn->prepare(
+                        "UPDATE parent_student
+                         SET RelationshipType = ?
+                         WHERE ParentID = ? AND StudentID = ?"
+                    );
+                    $updateRel->bind_param("sii", $relationship, $parentId, $studentId);
+                    $updateRel->execute();
+                    $updateRel->close();
+                }
+
+                $_SESSION['name'] = $fullName;
+                $_SESSION['profile_success'] = "Profile changes saved successfully.";
+                header("Location: profile.php");
+                exit();
+            }
+        }
+    }
+}
+
+if (isset($_SESSION['profile_success'])) {
+    $successMessage = $_SESSION['profile_success'];
+    unset($_SESSION['profile_success']);
+}
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name, u.Email, u.Phone, u.Address, u.Status, p.NIC
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT ps.RelationshipType,
+            s.RegistrationNo,
+            su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+$parentName = $parent['Name'] ?? '';
+$parentEmail = $parent['Email'] ?? '';
+$parentPhone = $parent['Phone'] ?? '';
+$parentAddress = $parent['Address'] ?? '';
+$parentNic = $parent['NIC'] ?? '';
+$parentStatus = trim((string) ($parent['Status'] ?? ''));
+$statusLabel = $parentStatus !== '' ? $parentStatus : 'Active';
+$relationship = $linkedStudent['RelationshipType'] ?? '';
+$studentName = $linkedStudent['StudentName'] ?? '';
+$studentRegNo = $linkedStudent['RegistrationNo'] ?? '';
+$program = '';
+$stream = '';
+$initials = parent_initials($parentName);
+
+if ($errorMessage !== '' && isset($_POST['save_profile'])) {
+    $parentName = trim($_POST['fullName'] ?? $parentName);
+    $parentEmail = trim($_POST['email'] ?? $parentEmail);
+    $parentPhone = trim($_POST['phone'] ?? $parentPhone);
+    $parentAddress = trim($_POST['address'] ?? $parentAddress);
+    $parentNic = trim($_POST['nic'] ?? $parentNic);
+    $relationship = trim($_POST['relationship'] ?? $relationship);
+    $initials = parent_initials($parentName);
+}
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +548,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($initials); ?>
 
                     </div>
 
@@ -363,7 +556,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName); ?>
                         </span>
 
                         <span class="user-role">
@@ -390,6 +583,20 @@
         <section class="dashboard-content">
 
 
+            <?php if ($successMessage !== ''): ?>
+                <div class="profile-alert profile-alert-success">
+                    <?php echo htmlspecialchars($successMessage); ?>
+                </div>
+            <?php endif; ?>
+
+
+            <?php if ($errorMessage !== ''): ?>
+                <div class="profile-alert profile-alert-error">
+                    <?php echo htmlspecialchars($errorMessage); ?>
+                </div>
+            <?php endif; ?>
+
+
             <!-- PROFILE HEADER -->
 
             <div class="profile-header-card">
@@ -400,7 +607,7 @@
 
                     <div class="large-profile-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($initials); ?>
 
                     </div>
 
@@ -409,12 +616,12 @@
 
 
                         <h1>
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName); ?>
                         </h1>
 
 
                         <p>
-                            Parent ID: LF2026P001
+                            Parent ID: <?php echo (int) $parentId; ?>
                         </p>
 
 
@@ -422,7 +629,7 @@
 
                             <i class="fa-solid fa-circle"></i>
 
-                            Active Parent
+                            <?php echo htmlspecialchars($statusLabel); ?>
 
                         </span>
 
@@ -478,7 +685,11 @@
 
 
 
-                <form id="profileForm">
+                <form
+                    id="profileForm"
+                    method="POST"
+                    action="profile.php"
+                >
 
 
                     <div class="profile-form-grid">
@@ -497,7 +708,9 @@
                             <input
                                 type="text"
                                 id="fullName"
-                                value="Nimal Fernando"
+                                name="fullName"
+                                value="<?php echo htmlspecialchars($parentName); ?>"
+                                required
                                 disabled
                             >
 
@@ -519,7 +732,7 @@
                             <input
                                 type="text"
                                 id="parentId"
-                                value="LF2026P001"
+                                value="<?php echo (int) $parentId; ?>"
                                 disabled
                             >
 
@@ -541,7 +754,9 @@
                             <input
                                 type="email"
                                 id="email"
-                                value="nimal.fernando@example.com"
+                                name="email"
+                                value="<?php echo htmlspecialchars($parentEmail); ?>"
+                                required
                                 disabled
                             >
 
@@ -563,7 +778,8 @@
                             <input
                                 type="tel"
                                 id="phone"
-                                value="+94 77 987 6543"
+                                name="phone"
+                                value="<?php echo htmlspecialchars($parentPhone); ?>"
                                 disabled
                             >
 
@@ -584,20 +800,22 @@
 
                             <select
                                 id="relationship"
+                                name="relationship"
                                 disabled
                             >
 
-                                <option selected>
-                                    Father
+                                <option value="" <?php echo $relationship === '' ? 'selected' : ''; ?>>
+                                    Select relationship
                                 </option>
 
-                                <option>
-                                    Mother
-                                </option>
-
-                                <option>
-                                    Guardian
-                                </option>
+                                <?php foreach ($allowedRelationships as $option): ?>
+                                    <option
+                                        value="<?php echo htmlspecialchars($option); ?>"
+                                        <?php echo $relationship === $option ? 'selected' : ''; ?>
+                                    >
+                                        <?php echo htmlspecialchars($option); ?>
+                                    </option>
+                                <?php endforeach; ?>
 
                             </select>
 
@@ -619,7 +837,8 @@
                             <input
                                 type="text"
                                 id="nic"
-                                value="782451234V"
+                                name="nic"
+                                value="<?php echo htmlspecialchars($parentNic); ?>"
                                 disabled
                             >
 
@@ -640,9 +859,10 @@
 
                             <textarea
                                 id="address"
+                                name="address"
                                 rows="3"
                                 disabled
-                            >123 Main Street, Colombo, Sri Lanka</textarea>
+                            ><?php echo htmlspecialchars($parentAddress); ?></textarea>
 
 
                         </div>
@@ -673,6 +893,8 @@
 
                         <button
                             type="submit"
+                            name="save_profile"
+                            value="1"
                             class="profile-save-btn"
                         >
 
@@ -733,7 +955,7 @@
 
 
                         <strong>
-                            Alex Silva
+                            <?php echo htmlspecialchars($studentName); ?>
                         </strong>
 
 
@@ -750,7 +972,7 @@
 
 
                         <strong>
-                            LF2026001
+                            <?php echo htmlspecialchars($studentRegNo); ?>
                         </strong>
 
 
@@ -767,7 +989,7 @@
 
 
                         <strong>
-                            G.C.E. Advanced Level
+                            <?php echo htmlspecialchars($program); ?>
                         </strong>
 
 
@@ -784,7 +1006,7 @@
 
 
                         <strong>
-                            Physical Science
+                            <?php echo htmlspecialchars($stream); ?>
                         </strong>
 
 
@@ -845,6 +1067,43 @@ document.addEventListener(
             );
 
 
+        const namedFields =
+            profileForm.querySelectorAll(
+                "input[name], select[name], textarea[name]"
+            );
+
+
+        const originalValues = {};
+
+
+        namedFields.forEach(
+            function (field) {
+
+                originalValues[field.name] = field.value;
+
+            }
+        );
+
+
+        function profileHasChanges() {
+
+            for (let i = 0; i < namedFields.length; i++) {
+
+                const field = namedFields[i];
+
+                if (field.value !== originalValues[field.name]) {
+
+                    return true;
+
+                }
+
+            }
+
+            return false;
+
+        }
+
+
         /* -------------------------
            EDIT PROFILE
         ------------------------- */
@@ -891,21 +1150,7 @@ document.addEventListener(
             "click",
             function () {
 
-
-                editableFields.forEach(
-                    function (field) {
-
-                        field.disabled = true;
-
-                    }
-                );
-
-
-                formActions.classList.remove("show");
-
-
-                editButton.style.display = "inline-flex";
-
+                window.location.href = "profile.php";
 
             }
         );
@@ -920,29 +1165,37 @@ document.addEventListener(
             "submit",
             function (event) {
 
+                if (!profileHasChanges()) {
 
-                event.preventDefault();
+                    event.preventDefault();
 
+                    editableFields.forEach(
+                        function (field) {
+
+                            field.disabled = true;
+
+                        }
+                    );
+
+                    formActions.classList.remove("show");
+
+                    editButton.style.display = "inline-flex";
+
+                    return;
+
+                }
 
                 editableFields.forEach(
                     function (field) {
 
-                        field.disabled = true;
+                        if (field.id !== "parentId") {
+
+                            field.disabled = false;
+
+                        }
 
                     }
                 );
-
-
-                formActions.classList.remove("show");
-
-
-                editButton.style.display = "inline-flex";
-
-
-                alert(
-                    "Profile changes saved successfully! (Frontend demo)"
-                );
-
 
             }
         );
