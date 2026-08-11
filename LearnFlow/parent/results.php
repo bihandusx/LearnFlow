@@ -1,3 +1,356 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID, su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function results_course_icon($courseName)
+{
+    $name = strtolower((string) $courseName);
+
+    if (strpos($name, 'math') !== false) {
+        return 'fa-calculator';
+    }
+    if (strpos($name, 'physics') !== false) {
+        return 'fa-atom';
+    }
+    if (strpos($name, 'chemistry') !== false) {
+        return 'fa-flask';
+    }
+    if (strpos($name, 'english') !== false) {
+        return 'fa-language';
+    }
+    if (strpos($name, 'web') !== false || strpos($name, 'develop') !== false) {
+        return 'fa-code';
+    }
+
+    return 'fa-book';
+}
+
+function results_first_name($fullName)
+{
+    $parts = preg_split('/\s+/', trim((string) $fullName));
+    return !empty($parts[0]) ? $parts[0] : 'Student';
+}
+
+function results_slug($value)
+{
+    $slug = strtolower(trim((string) $value));
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    return trim($slug, '-') ?: 'item';
+}
+
+/**
+ * Standard letter grade from marks out of 100.
+ * A >= 90, B+ >= 80, B >= 70, C+ >= 65, C >= 55, S >= 40, F < 40
+ */
+function results_marks_to_grade($marks)
+{
+    $marks = (int) round((float) $marks);
+
+    if ($marks >= 90) {
+        return 'A';
+    }
+    if ($marks >= 80) {
+        return 'B+';
+    }
+    if ($marks >= 70) {
+        return 'B';
+    }
+    if ($marks >= 65) {
+        return 'C+';
+    }
+    if ($marks >= 55) {
+        return 'C';
+    }
+    if ($marks >= 40) {
+        return 'S';
+    }
+    return 'F';
+}
+
+function results_normalize_pct($marks, $totalMarks)
+{
+    $total = (int) ($totalMarks ?? 100);
+    if ($total <= 0) {
+        $total = 100;
+    }
+
+    return (int) round(((int) $marks / $total) * 100);
+}
+
+function results_status_from_pct($pct)
+{
+    $pct = (int) $pct;
+
+    if ($pct >= 80) {
+        return ['label' => 'Distinction', 'slug' => 'distinction'];
+    }
+    if ($pct >= 40) {
+        return ['label' => 'Pass', 'slug' => 'pass'];
+    }
+
+    return ['label' => 'Fail', 'slug' => 'fail'];
+}
+
+function results_grade_pill_class($grade)
+{
+    $grade = strtoupper(trim((string) $grade));
+
+    if ($grade === 'A') {
+        return 'grade-a';
+    }
+    if ($grade === 'B+' || $grade === 'B') {
+        return 'grade-b';
+    }
+
+    return 'grade-c';
+}
+
+$parentName = $parent['Name'];
+$parentInitials = parent_initials($parentName);
+
+$studentFirstName = 'Student';
+$resultRows = [];
+$subjectOverview = [];
+$courseFilterOptions = [];
+$examFilterOptions = [];
+$overallAveragePct = null;
+$bestSubject = '—';
+$examsSat = 0;
+$hasResults = false;
+
+if ($linkedStudent) {
+    $studentId = (int) $linkedStudent['StudentID'];
+    $studentFirstName = results_first_name($linkedStudent['StudentName']);
+
+    $examStmt = $conn->prepare(
+        "SELECT c.CourseID, c.CourseName, t.TestID, t.Title, t.TotalMarks,
+                e.ExamDate, er.Marks, er.Grade
+         FROM exam_result er
+         INNER JOIN exam e ON e.TestID = er.TestID
+         INNER JOIN test t ON t.TestID = e.TestID
+         INNER JOIN batch b ON b.BatchID = t.BatchID
+         INNER JOIN course c ON c.CourseID = b.CourseID
+         WHERE er.StudentID = ?
+         ORDER BY e.ExamDate DESC, c.CourseName ASC, t.TestID DESC"
+    );
+    $examStmt->bind_param("i", $studentId);
+    $examStmt->execute();
+    $examResult = $examStmt->get_result();
+
+    $rawRows = [];
+    $testIds = [];
+    $allPcts = [];
+    $byCourse = [];
+
+    while ($row = $examResult->fetch_assoc()) {
+        if ($row['Marks'] === null) {
+            continue;
+        }
+
+        $testId = (int) $row['TestID'];
+        $pct = results_normalize_pct($row['Marks'], $row['TotalMarks']);
+        $storedGrade = trim((string) ($row['Grade'] ?? ''));
+        $grade = $storedGrade !== '' ? $storedGrade : results_marks_to_grade($pct);
+        $courseId = (int) $row['CourseID'];
+        $courseName = (string) $row['CourseName'];
+        $title = (string) $row['Title'];
+
+        $rawRows[] = [
+            'test_id' => $testId,
+            'course_id' => $courseId,
+            'course_name' => $courseName,
+            'course_slug' => 'course-' . $courseId,
+            'exam_slug' => results_slug($title),
+            'title' => $title,
+            'pct' => $pct,
+            'grade' => $grade,
+            'exam_date' => $row['ExamDate'],
+        ];
+
+        $testIds[$testId] = true;
+        $allPcts[] = $pct;
+
+        if (!isset($byCourse[$courseId])) {
+            $byCourse[$courseId] = [
+                'course_name' => $courseName,
+                'pcts' => [],
+            ];
+        }
+        $byCourse[$courseId]['pcts'][] = $pct;
+
+        $courseFilterOptions[$courseId] = $courseName;
+        $examFilterOptions[results_slug($title)] = $title;
+    }
+    $examStmt->close();
+
+    $classAvgByTest = [];
+    if (!empty($testIds)) {
+        $idList = array_map('intval', array_keys($testIds));
+        $placeholders = implode(',', array_fill(0, count($idList), '?'));
+        $types = str_repeat('i', count($idList));
+
+        $avgSql =
+            "SELECT er.TestID, er.Marks, t.TotalMarks
+             FROM exam_result er
+             INNER JOIN test t ON t.TestID = er.TestID
+             WHERE er.TestID IN ($placeholders)";
+        $avgStmt = $conn->prepare($avgSql);
+        $avgStmt->bind_param($types, ...$idList);
+        $avgStmt->execute();
+        $avgResult = $avgStmt->get_result();
+
+        $sums = [];
+        $counts = [];
+        while ($avgRow = $avgResult->fetch_assoc()) {
+            if ($avgRow['Marks'] === null) {
+                continue;
+            }
+            $tid = (int) $avgRow['TestID'];
+            $pct = results_normalize_pct($avgRow['Marks'], $avgRow['TotalMarks']);
+            if (!isset($sums[$tid])) {
+                $sums[$tid] = 0;
+                $counts[$tid] = 0;
+            }
+            $sums[$tid] += $pct;
+            $counts[$tid]++;
+        }
+        $avgStmt->close();
+
+        foreach ($sums as $tid => $sum) {
+            $classAvgByTest[$tid] = (int) round($sum / $counts[$tid]);
+        }
+    }
+
+    foreach ($rawRows as $row) {
+        $status = results_status_from_pct($row['pct']);
+        $classAvg = $classAvgByTest[$row['test_id']] ?? $row['pct'];
+
+        $resultRows[] = [
+            'course_slug' => $row['course_slug'],
+            'exam_slug' => $row['exam_slug'],
+            'title' => $row['title'],
+            'course_name' => $row['course_name'],
+            'course_icon' => results_course_icon($row['course_name']),
+            'marks_label' => $row['pct'] . '%',
+            'grade' => $row['grade'],
+            'class_avg_label' => $classAvg . '%',
+            'status_label' => $status['label'],
+            'status_slug' => $status['slug'],
+        ];
+    }
+
+    foreach ($byCourse as $courseId => $course) {
+        $mean = array_sum($course['pcts']) / count($course['pcts']);
+        $avgPct = (int) round($mean);
+        $letter = results_marks_to_grade($mean);
+
+        $subjectOverview[] = [
+            'course_id' => $courseId,
+            'course_name' => $course['course_name'],
+            'course_icon' => results_course_icon($course['course_name']),
+            'average_pct' => $avgPct,
+            'grade' => $letter,
+            'grade_class' => results_grade_pill_class($letter),
+        ];
+    }
+
+    usort($subjectOverview, static function ($a, $b) {
+        return strcasecmp($a['course_name'], $b['course_name']);
+    });
+
+    asort($courseFilterOptions, SORT_NATURAL | SORT_FLAG_CASE);
+    asort($examFilterOptions, SORT_NATURAL | SORT_FLAG_CASE);
+
+    $examsSat = count($resultRows);
+    $hasResults = $examsSat > 0;
+
+    if ($examsSat > 0) {
+        $overallAveragePct = (int) round(array_sum($allPcts) / count($allPcts));
+
+        $bestPct = null;
+        $bestName = null;
+        foreach ($subjectOverview as $subject) {
+            if ($bestPct === null
+                || $subject['average_pct'] > $bestPct
+                || ($subject['average_pct'] === $bestPct
+                    && strcasecmp($subject['course_name'], (string) $bestName) < 0)
+            ) {
+                $bestPct = $subject['average_pct'];
+                $bestName = $subject['course_name'];
+            }
+        }
+        $bestSubject = $bestName !== null ? $bestName : '—';
+    }
+}
+
+$pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Examination Results";
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +708,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +716,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -398,7 +751,7 @@
                 <div>
 
                     <h1>
-                        Alex's Examination Results
+                        <?php echo $pageTitle; ?>
                     </h1>
 
                     <p>
@@ -414,7 +767,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            79%
+                            <?php echo $overallAveragePct !== null ? $overallAveragePct . '%' : '—'; ?>
                         </strong>
 
                         <span>
@@ -427,7 +780,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            English
+                            <?php echo htmlspecialchars($bestSubject, ENT_QUOTES, 'UTF-8'); ?>
                         </strong>
 
                         <span>
@@ -440,24 +793,11 @@
                     <div class="summary-item">
 
                         <strong>
-                            8
+                            <?php echo (int) $examsSat; ?>
                         </strong>
 
                         <span>
                             Exams Sat
-                        </span>
-
-                    </div>
-
-
-                    <div class="summary-item">
-
-                        <strong>
-                            5 / 32
-                        </strong>
-
-                        <span>
-                            Class Rank
                         </span>
 
                     </div>
@@ -491,132 +831,49 @@
                     </div>
 
 
+                    <?php if (!$hasResults): ?>
 
-                    <div class="grade-item">
+                        <p style="padding: 0 20px 20px; color: #6b7280; font-size: 0.85rem;">
+                            No examination results available yet.
+                        </p>
 
+                    <?php else: ?>
 
-                        <div class="course-icon">
+                        <?php foreach ($subjectOverview as $subject): ?>
 
-                            <i class="fa-solid fa-calculator"></i>
-
-                        </div>
-
-
-                        <div class="course-info">
-
-                            <h4>
-                                Combined Mathematics
-                            </h4>
-
-                            <p>
-                                Mid-Term Average: 76%
-                            </p>
-
-                        </div>
+                            <div class="grade-item">
 
 
-                        <div class="grade-pill grade-b">
-                            B+
-                        </div>
+                                <div class="course-icon">
+
+                                    <i class="fa-solid <?php echo htmlspecialchars($subject['course_icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
+
+                                </div>
 
 
-                    </div>
+                                <div class="course-info">
+
+                                    <h4>
+                                        <?php echo htmlspecialchars($subject['course_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </h4>
+
+                                    <p>
+                                        Average: <?php echo (int) $subject['average_pct']; ?>%
+                                    </p>
+
+                                </div>
 
 
-
-                    <div class="grade-item">
-
-
-                        <div class="course-icon">
-
-                            <i class="fa-solid fa-flask"></i>
-
-                        </div>
+                                <div class="grade-pill <?php echo htmlspecialchars($subject['grade_class'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo htmlspecialchars($subject['grade'], ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
 
 
-                        <div class="course-info">
+                            </div>
 
-                            <h4>
-                                Chemistry
-                            </h4>
+                        <?php endforeach; ?>
 
-                            <p>
-                                Mid-Term Average: 67%
-                            </p>
-
-                        </div>
-
-
-                        <div class="grade-pill grade-c">
-                            B
-                        </div>
-
-
-                    </div>
-
-
-
-                    <div class="grade-item">
-
-
-                        <div class="course-icon">
-
-                            <i class="fa-solid fa-atom"></i>
-
-                        </div>
-
-
-                        <div class="course-info">
-
-                            <h4>
-                                Physics
-                            </h4>
-
-                            <p>
-                                Mid-Term Average: 70%
-                            </p>
-
-                        </div>
-
-
-                        <div class="grade-pill grade-b">
-                            B
-                        </div>
-
-
-                    </div>
-
-
-
-                    <div class="grade-item">
-
-
-                        <div class="course-icon">
-
-                            <i class="fa-solid fa-language"></i>
-
-                        </div>
-
-
-                        <div class="course-info">
-
-                            <h4>
-                                General English
-                            </h4>
-
-                            <p>
-                                Mid-Term Average: 90%
-                            </p>
-
-                        </div>
-
-
-                        <div class="grade-pill grade-a">
-                            A
-                        </div>
-
-
-                    </div>
+                    <?php endif; ?>
 
 
                 </div>
@@ -640,21 +897,13 @@
                         All Courses
                     </option>
 
-                    <option value="mathematics">
-                        Combined Mathematics
-                    </option>
+                    <?php foreach ($courseFilterOptions as $courseId => $courseName): ?>
 
-                    <option value="physics">
-                        Physics
-                    </option>
+                        <option value="course-<?php echo (int) $courseId; ?>">
+                            <?php echo htmlspecialchars($courseName, ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
 
-                    <option value="chemistry">
-                        Chemistry
-                    </option>
-
-                    <option value="english">
-                        General English
-                    </option>
+                    <?php endforeach; ?>
 
                 </select>
 
@@ -669,13 +918,13 @@
                         All Exams
                     </option>
 
-                    <option value="first-term">
-                        First Term Test
-                    </option>
+                    <?php foreach ($examFilterOptions as $examSlug => $examTitle): ?>
 
-                    <option value="mid-term">
-                        Mid-Term Examination
-                    </option>
+                        <option value="<?php echo htmlspecialchars($examSlug, ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($examTitle, ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
+
+                    <?php endforeach; ?>
 
                 </select>
 
@@ -686,7 +935,10 @@
 
             <!-- RESULTS TABLE -->
 
-            <div class="results-table-card">
+            <div
+                class="results-table-card"
+                <?php echo !$hasResults ? 'style="display: none;"' : ''; ?>
+            >
 
 
                 <table
@@ -718,302 +970,45 @@
 
                     <tbody>
 
+                        <?php foreach ($resultRows as $row): ?>
 
-                        <tr
-                            class="results-row"
-                            data-course="mathematics"
-                            data-exam="first-term"
-                        >
+                            <tr
+                                class="results-row"
+                                data-course="<?php echo htmlspecialchars($row['course_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-exam="<?php echo htmlspecialchars($row['exam_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                            >
 
-                            <td>First Term Test</td>
+                                <td><?php echo htmlspecialchars($row['title'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td>
+                                <td>
 
-                                <span class="results-course">
+                                    <span class="results-course">
 
-                                    <i class="fa-solid fa-calculator"></i>
+                                        <i class="fa-solid <?php echo htmlspecialchars($row['course_icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
 
-                                    Combined Mathematics
+                                        <?php echo htmlspecialchars($row['course_name'], ENT_QUOTES, 'UTF-8'); ?>
 
-                                </span>
+                                    </span>
 
-                            </td>
+                                </td>
 
-                            <td>72%</td>
+                                <td><?php echo htmlspecialchars($row['marks_label'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td>B</td>
+                                <td><?php echo htmlspecialchars($row['grade'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td>65%</td>
+                                <td><?php echo htmlspecialchars($row['class_avg_label'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td>
+                                <td>
 
-                                <span class="status-badge status-pass">
-                                    Pass
-                                </span>
+                                    <span class="status-badge status-<?php echo htmlspecialchars($row['status_slug'], ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($row['status_label'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </span>
 
-                            </td>
+                                </td>
 
-                        </tr>
+                            </tr>
 
-
-                        <tr
-                            class="results-row"
-                            data-course="mathematics"
-                            data-exam="mid-term"
-                        >
-
-                            <td>Mid-Term Examination</td>
-
-                            <td>
-
-                                <span class="results-course">
-
-                                    <i class="fa-solid fa-calculator"></i>
-
-                                    Combined Mathematics
-
-                                </span>
-
-                            </td>
-
-                            <td>80%</td>
-
-                            <td>A</td>
-
-                            <td>68%</td>
-
-                            <td>
-
-                                <span class="status-badge status-distinction">
-                                    Distinction
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="results-row"
-                            data-course="chemistry"
-                            data-exam="first-term"
-                        >
-
-                            <td>First Term Test</td>
-
-                            <td>
-
-                                <span class="results-course">
-
-                                    <i class="fa-solid fa-flask"></i>
-
-                                    Chemistry
-
-                                </span>
-
-                            </td>
-
-                            <td>70%</td>
-
-                            <td>B+</td>
-
-                            <td>60%</td>
-
-                            <td>
-
-                                <span class="status-badge status-pass">
-                                    Pass
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="results-row"
-                            data-course="chemistry"
-                            data-exam="mid-term"
-                        >
-
-                            <td>Mid-Term Examination</td>
-
-                            <td>
-
-                                <span class="results-course">
-
-                                    <i class="fa-solid fa-flask"></i>
-
-                                    Chemistry
-
-                                </span>
-
-                            </td>
-
-                            <td>65%</td>
-
-                            <td>B</td>
-
-                            <td>62%</td>
-
-                            <td>
-
-                                <span class="status-badge status-pass">
-                                    Pass
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="results-row"
-                            data-course="physics"
-                            data-exam="first-term"
-                        >
-
-                            <td>First Term Test</td>
-
-                            <td>
-
-                                <span class="results-course">
-
-                                    <i class="fa-solid fa-atom"></i>
-
-                                    Physics
-
-                                </span>
-
-                            </td>
-
-                            <td>68%</td>
-
-                            <td>B</td>
-
-                            <td>63%</td>
-
-                            <td>
-
-                                <span class="status-badge status-pass">
-                                    Pass
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="results-row"
-                            data-course="physics"
-                            data-exam="mid-term"
-                        >
-
-                            <td>Mid-Term Examination</td>
-
-                            <td>
-
-                                <span class="results-course">
-
-                                    <i class="fa-solid fa-atom"></i>
-
-                                    Physics
-
-                                </span>
-
-                            </td>
-
-                            <td>72%</td>
-
-                            <td>B+</td>
-
-                            <td>64%</td>
-
-                            <td>
-
-                                <span class="status-badge status-pass">
-                                    Pass
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="results-row"
-                            data-course="english"
-                            data-exam="first-term"
-                        >
-
-                            <td>First Term Test</td>
-
-                            <td>
-
-                                <span class="results-course">
-
-                                    <i class="fa-solid fa-language"></i>
-
-                                    General English
-
-                                </span>
-
-                            </td>
-
-                            <td>88%</td>
-
-                            <td>A</td>
-
-                            <td>70%</td>
-
-                            <td>
-
-                                <span class="status-badge status-distinction">
-                                    Distinction
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="results-row"
-                            data-course="english"
-                            data-exam="mid-term"
-                        >
-
-                            <td>Mid-Term Examination</td>
-
-                            <td>
-
-                                <span class="results-course">
-
-                                    <i class="fa-solid fa-language"></i>
-
-                                    General English
-
-                                </span>
-
-                            </td>
-
-                            <td>91%</td>
-
-                            <td>A</td>
-
-                            <td>72%</td>
-
-                            <td>
-
-                                <span class="status-badge status-distinction">
-                                    Distinction
-                                </span>
-
-                            </td>
-
-                        </tr>
-
+                        <?php endforeach; ?>
 
                     </tbody>
 
@@ -1030,6 +1025,7 @@
             <div
                 id="noResults"
                 class="no-results"
+                <?php echo !$hasResults ? 'style="display: flex;"' : ''; ?>
             >
 
                 <i class="fa-solid fa-award"></i>
@@ -1039,7 +1035,9 @@
                 </h3>
 
                 <p>
-                    Try changing your filter options.
+                    <?php echo $hasResults
+                        ? 'Try changing your filter options.'
+                        : 'No examination results are available for your child yet.'; ?>
                 </p>
 
             </div>
@@ -1090,8 +1088,16 @@ document.addEventListener(
             document.getElementById("noResults");
 
 
+        const hasRows = resultRows.length > 0;
+
+
 
         function filterResults() {
+
+
+            if (!hasRows) {
+                return;
+            }
 
 
             const selectedCourse =
@@ -1126,7 +1132,6 @@ document.addEventListener(
                     const matchesExam =
                         selectedExam === "all" ||
                         exam === selectedExam;
-
 
 
                     if (matchesCourse && matchesExam) {
