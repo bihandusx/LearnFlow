@@ -88,6 +88,22 @@ CREATE TABLE `assignment_submission` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `attendance`
+--
+
+CREATE TABLE `attendance` (
+  `AttendanceID` int(11) NOT NULL,
+  `StudentID` int(11) DEFAULT NULL,
+  `CourseID` int(11) DEFAULT NULL,
+  `SessionID` int(11) DEFAULT NULL,
+  `AttendanceDate` date DEFAULT NULL,
+  `Status` enum('Present','Absent') DEFAULT NULL,
+  `MarkedBy` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `batch`
 --
 
@@ -126,6 +142,21 @@ CREATE TABLE `course` (
 
 INSERT INTO `course` (`CourseID`, `CourseName`, `Description`, `CourseFee`) VALUES
 (1, 'Web Development', 'HTML CSS PHP and MySQL', 50000.00);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `course_session`
+--
+
+CREATE TABLE `course_session` (
+  `SessionID` int(11) NOT NULL,
+  `CourseID` int(11) DEFAULT NULL,
+  `TeacherID` int(11) DEFAULT NULL,
+  `SessionDate` date DEFAULT NULL,
+  `StartTime` time DEFAULT NULL,
+  `EndTime` time DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -445,6 +476,16 @@ ALTER TABLE `assignment_submission`
   ADD KEY `TestID` (`TestID`);
 
 --
+-- Indexes for table `attendance`
+--
+ALTER TABLE `attendance`
+  ADD PRIMARY KEY (`AttendanceID`),
+  ADD UNIQUE KEY `student_session` (`StudentID`,`SessionID`),
+  ADD KEY `CourseID` (`CourseID`),
+  ADD KEY `SessionID` (`SessionID`),
+  ADD KEY `MarkedBy` (`MarkedBy`);
+
+--
 -- Indexes for table `batch`
 --
 ALTER TABLE `batch`
@@ -456,6 +497,14 @@ ALTER TABLE `batch`
 --
 ALTER TABLE `course`
   ADD PRIMARY KEY (`CourseID`);
+
+--
+-- Indexes for table `course_session`
+--
+ALTER TABLE `course_session`
+  ADD PRIMARY KEY (`SessionID`),
+  ADD KEY `CourseID` (`CourseID`),
+  ADD KEY `TeacherID` (`TeacherID`);
 
 --
 -- Indexes for table `digital_tute`
@@ -612,6 +661,12 @@ ALTER TABLE `assignment_submission`
   MODIFY `SubmissionID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `attendance`
+--
+ALTER TABLE `attendance`
+  MODIFY `AttendanceID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `batch`
 --
 ALTER TABLE `batch`
@@ -622,6 +677,12 @@ ALTER TABLE `batch`
 --
 ALTER TABLE `course`
   MODIFY `CourseID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `course_session`
+--
+ALTER TABLE `course_session`
+  MODIFY `SessionID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `digital_tute`
@@ -738,10 +799,26 @@ ALTER TABLE `assignment_submission`
   ADD CONSTRAINT `assignment_submission_ibfk_2` FOREIGN KEY (`TestID`) REFERENCES `assignment` (`TestID`);
 
 --
+-- Constraints for table `attendance`
+--
+ALTER TABLE `attendance`
+  ADD CONSTRAINT `attendance_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `student` (`StudentID`),
+  ADD CONSTRAINT `attendance_ibfk_2` FOREIGN KEY (`CourseID`) REFERENCES `course` (`CourseID`),
+  ADD CONSTRAINT `attendance_ibfk_3` FOREIGN KEY (`SessionID`) REFERENCES `course_session` (`SessionID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `attendance_ibfk_4` FOREIGN KEY (`MarkedBy`) REFERENCES `teacher` (`TeacherID`);
+
+--
 -- Constraints for table `batch`
 --
 ALTER TABLE `batch`
   ADD CONSTRAINT `batch_ibfk_1` FOREIGN KEY (`CourseID`) REFERENCES `course` (`CourseID`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `course_session`
+--
+ALTER TABLE `course_session`
+  ADD CONSTRAINT `course_session_ibfk_1` FOREIGN KEY (`CourseID`) REFERENCES `course` (`CourseID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `course_session_ibfk_2` FOREIGN KEY (`TeacherID`) REFERENCES `teacher` (`TeacherID`);
 
 --
 -- Constraints for table `discussion_forum`

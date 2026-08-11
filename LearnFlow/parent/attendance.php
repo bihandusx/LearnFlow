@@ -1,3 +1,173 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID, su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function attendance_course_slug($courseName)
+{
+    $slug = strtolower(trim((string) $courseName));
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    return trim($slug, '-') ?: 'course';
+}
+
+function attendance_course_icon($courseName)
+{
+    $name = strtolower((string) $courseName);
+
+    if (strpos($name, 'math') !== false) {
+        return 'fa-calculator';
+    }
+    if (strpos($name, 'physics') !== false) {
+        return 'fa-atom';
+    }
+    if (strpos($name, 'chemistry') !== false) {
+        return 'fa-flask';
+    }
+    if (strpos($name, 'english') !== false) {
+        return 'fa-language';
+    }
+    if (strpos($name, 'web') !== false || strpos($name, 'develop') !== false) {
+        return 'fa-code';
+    }
+
+    return 'fa-book';
+}
+
+function attendance_first_name($fullName)
+{
+    $parts = preg_split('/\s+/', trim((string) $fullName));
+    return !empty($parts[0]) ? $parts[0] : 'Student';
+}
+
+$parentName = $parent['Name'];
+$parentInitials = parent_initials($parentName);
+
+$attendanceRows = [];
+$courseOptions = [];
+$presentCount = 0;
+$absentCount = 0;
+$attendanceRate = 0;
+$studentFirstName = 'Student';
+
+if ($linkedStudent) {
+    $studentId = (int) $linkedStudent['StudentID'];
+    $studentFirstName = attendance_first_name($linkedStudent['StudentName']);
+
+    $attendanceStmt = $conn->prepare(
+        "SELECT a.AttendanceDate, a.Status, c.CourseID, c.CourseName,
+                cs.StartTime, cs.EndTime
+         FROM attendance a
+         INNER JOIN course c ON c.CourseID = a.CourseID
+         INNER JOIN course_session cs ON cs.SessionID = a.SessionID
+         WHERE a.StudentID = ?
+         ORDER BY a.AttendanceDate DESC, cs.StartTime DESC"
+    );
+    $attendanceStmt->bind_param("i", $studentId);
+    $attendanceStmt->execute();
+    $attendanceResult = $attendanceStmt->get_result();
+
+    while ($row = $attendanceResult->fetch_assoc()) {
+        $status = $row['Status'] === 'Absent' ? 'Absent' : 'Present';
+        if ($status === 'Present') {
+            $presentCount++;
+        } else {
+            $absentCount++;
+        }
+
+        $courseId = (int) $row['CourseID'];
+        $courseOptions[$courseId] = $row['CourseName'];
+
+        $start = strtotime($row['StartTime']);
+        $end = strtotime($row['EndTime']);
+        $date = strtotime($row['AttendanceDate']);
+
+        $attendanceRows[] = [
+            'date_label' => $date ? date('d M Y', $date) : '',
+            'course_name' => $row['CourseName'],
+            'course_slug' => attendance_course_slug($row['CourseName']),
+            'course_icon' => attendance_course_icon($row['CourseName']),
+            'time_label' => ($start && $end)
+                ? date('g:i A', $start) . ' - ' . date('g:i A', $end)
+                : '',
+            'status' => $status,
+            'status_slug' => strtolower($status),
+        ];
+    }
+
+    $attendanceStmt->close();
+
+    $total = $presentCount + $absentCount;
+    $attendanceRate = $total > 0 ? (int) round(($presentCount / $total) * 100) : 0;
+}
+
+$hasRecords = count($attendanceRows) > 0;
+$pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Attendance";
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +525,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +533,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -398,7 +568,7 @@
                 <div>
 
                     <h1>
-                        Alex's Attendance
+                        <?php echo $pageTitle; ?>
                     </h1>
 
                     <p>
@@ -414,7 +584,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            94%
+                            <?php echo $hasRecords ? $attendanceRate . '%' : '0%'; ?>
                         </strong>
 
                         <span>
@@ -427,7 +597,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            47
+                            <?php echo (int) $presentCount; ?>
                         </strong>
 
                         <span>
@@ -440,24 +610,11 @@
                     <div class="summary-item">
 
                         <strong>
-                            2
+                            <?php echo (int) $absentCount; ?>
                         </strong>
 
                         <span>
                             Absent
-                        </span>
-
-                    </div>
-
-
-                    <div class="summary-item">
-
-                        <strong>
-                            1
-                        </strong>
-
-                        <span>
-                            Late
                         </span>
 
                     </div>
@@ -501,21 +658,11 @@
                         All Courses
                     </option>
 
-                    <option value="mathematics">
-                        Combined Mathematics
-                    </option>
-
-                    <option value="physics">
-                        Physics
-                    </option>
-
-                    <option value="chemistry">
-                        Chemistry
-                    </option>
-
-                    <option value="english">
-                        General English
-                    </option>
+                    <?php foreach ($courseOptions as $courseName): ?>
+                        <option value="<?php echo htmlspecialchars(attendance_course_slug($courseName), ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($courseName, ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
+                    <?php endforeach; ?>
 
                 </select>
 
@@ -538,10 +685,6 @@
                         Absent
                     </option>
 
-                    <option value="late">
-                        Late
-                    </option>
-
                 </select>
 
 
@@ -551,7 +694,10 @@
 
             <!-- ATTENDANCE TABLE -->
 
-            <div class="attendance-table-card">
+            <div
+                class="attendance-table-card"
+                <?php echo $hasRecords ? '' : 'style="display: none;"'; ?>
+            >
 
 
                 <table
@@ -579,237 +725,39 @@
 
                     <tbody>
 
+                        <?php foreach ($attendanceRows as $row): ?>
+                            <tr
+                                class="attendance-row"
+                                data-course="<?php echo htmlspecialchars($row['course_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-status="<?php echo htmlspecialchars($row['status_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                            >
 
-                        <tr
-                            class="attendance-row"
-                            data-course="mathematics"
-                            data-status="present"
-                        >
+                                <td><?php echo htmlspecialchars($row['date_label'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td>01 Aug 2026</td>
+                                <td>
 
-                            <td>
+                                    <span class="attendance-course">
 
-                                <span class="attendance-course">
+                                        <i class="fa-solid <?php echo htmlspecialchars($row['course_icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
 
-                                    <i class="fa-solid fa-calculator"></i>
+                                        <?php echo htmlspecialchars($row['course_name'], ENT_QUOTES, 'UTF-8'); ?>
 
-                                    Combined Mathematics
+                                    </span>
 
-                                </span>
+                                </td>
 
-                            </td>
+                                <td><?php echo htmlspecialchars($row['time_label'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td>3:00 PM - 5:00 PM</td>
+                                <td>
 
-                            <td>
+                                    <span class="status-badge status-<?php echo htmlspecialchars($row['status_slug'], ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($row['status'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </span>
 
-                                <span class="status-badge status-present">
-                                    Present
-                                </span>
+                                </td>
 
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="attendance-row"
-                            data-course="physics"
-                            data-status="present"
-                        >
-
-                            <td>31 Jul 2026</td>
-
-                            <td>
-
-                                <span class="attendance-course">
-
-                                    <i class="fa-solid fa-atom"></i>
-
-                                    Physics
-
-                                </span>
-
-                            </td>
-
-                            <td>1:00 PM - 3:00 PM</td>
-
-                            <td>
-
-                                <span class="status-badge status-present">
-                                    Present
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="attendance-row"
-                            data-course="chemistry"
-                            data-status="late"
-                        >
-
-                            <td>30 Jul 2026</td>
-
-                            <td>
-
-                                <span class="attendance-course">
-
-                                    <i class="fa-solid fa-flask"></i>
-
-                                    Chemistry
-
-                                </span>
-
-                            </td>
-
-                            <td>9:00 AM - 11:00 AM</td>
-
-                            <td>
-
-                                <span class="status-badge status-late">
-                                    Late
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="attendance-row"
-                            data-course="mathematics"
-                            data-status="absent"
-                        >
-
-                            <td>29 Jul 2026</td>
-
-                            <td>
-
-                                <span class="attendance-course">
-
-                                    <i class="fa-solid fa-calculator"></i>
-
-                                    Combined Mathematics
-
-                                </span>
-
-                            </td>
-
-                            <td>3:00 PM - 5:00 PM</td>
-
-                            <td>
-
-                                <span class="status-badge status-absent">
-                                    Absent
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="attendance-row"
-                            data-course="english"
-                            data-status="present"
-                        >
-
-                            <td>28 Jul 2026</td>
-
-                            <td>
-
-                                <span class="attendance-course">
-
-                                    <i class="fa-solid fa-language"></i>
-
-                                    General English
-
-                                </span>
-
-                            </td>
-
-                            <td>10:00 AM - 11:30 AM</td>
-
-                            <td>
-
-                                <span class="status-badge status-present">
-                                    Present
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="attendance-row"
-                            data-course="physics"
-                            data-status="absent"
-                        >
-
-                            <td>24 Jul 2026</td>
-
-                            <td>
-
-                                <span class="attendance-course">
-
-                                    <i class="fa-solid fa-atom"></i>
-
-                                    Physics
-
-                                </span>
-
-                            </td>
-
-                            <td>1:00 PM - 3:00 PM</td>
-
-                            <td>
-
-                                <span class="status-badge status-absent">
-                                    Absent
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="attendance-row"
-                            data-course="chemistry"
-                            data-status="present"
-                        >
-
-                            <td>23 Jul 2026</td>
-
-                            <td>
-
-                                <span class="attendance-course">
-
-                                    <i class="fa-solid fa-flask"></i>
-
-                                    Chemistry
-
-                                </span>
-
-                            </td>
-
-                            <td>9:00 AM - 11:00 AM</td>
-
-                            <td>
-
-                                <span class="status-badge status-present">
-                                    Present
-                                </span>
-
-                            </td>
-
-                        </tr>
-
+                            </tr>
+                        <?php endforeach; ?>
 
                     </tbody>
 
@@ -826,6 +774,7 @@
             <div
                 id="noAttendance"
                 class="no-attendance"
+                <?php echo $hasRecords ? '' : 'style="display: flex;"'; ?>
             >
 
                 <i class="fa-solid fa-calendar-xmark"></i>
@@ -835,7 +784,9 @@
                 </h3>
 
                 <p>
-                    Try changing your search or filter options.
+                    <?php echo $hasRecords
+                        ? 'Try changing your search or filter options.'
+                        : 'There are no attendance records to show yet.'; ?>
                 </p>
 
             </div>
@@ -890,6 +841,14 @@ document.addEventListener(
             document.getElementById("noAttendance");
 
 
+        const emptyMessage =
+            noAttendance.querySelector("p");
+
+
+        const hasServerRecords =
+            attendanceRows.length > 0;
+
+
 
         function filterAttendance() {
 
@@ -917,14 +876,14 @@ document.addEventListener(
 
 
                     const course =
-                        row.getAttribute("data-course");
+                        row.getAttribute("data-course") || "";
 
 
                     const status =
-                        row.getAttribute("data-status");
+                        row.getAttribute("data-status") || "";
 
 
-                    const courseName =
+                    const courseText =
                         row
                             .querySelector(".attendance-course")
                             .textContent
@@ -933,7 +892,8 @@ document.addEventListener(
 
 
                     const matchesSearch =
-                        courseName.includes(searchValue);
+                        searchValue === "" ||
+                        courseText.includes(searchValue);
 
 
                     const matchesCourse =
@@ -946,50 +906,36 @@ document.addEventListener(
                         status === selectedStatus;
 
 
-
-                    if (
+                    const isVisible =
                         matchesSearch &&
                         matchesCourse &&
-                        matchesStatus
-                    ) {
+                        matchesStatus;
 
-                        row.style.display = "";
 
+                    row.style.display =
+                        isVisible ? "" : "none";
+
+
+                    if (isVisible) {
                         visibleCount++;
-
                     }
-
-                    else {
-
-                        row.style.display = "none";
-
-                    }
-
 
                 }
             );
 
 
-
-            if (visibleCount === 0) {
-
+            if (!hasServerRecords || visibleCount === 0) {
                 attendanceTableCard.style.display = "none";
-
                 noAttendance.style.display = "flex";
-
-            }
-
-            else {
-
-                attendanceTableCard.style.display = "block";
-
+                emptyMessage.textContent = hasServerRecords
+                    ? "Try changing your search or filter options."
+                    : "There are no attendance records to show yet.";
+            } else {
+                attendanceTableCard.style.display = "";
                 noAttendance.style.display = "none";
-
             }
-
 
         }
-
 
 
         searchInput.addEventListener("input", filterAttendance);
