@@ -133,7 +133,9 @@ CREATE TABLE `course` (
   `CourseID` int(11) NOT NULL,
   `CourseName` varchar(100) DEFAULT NULL,
   `Description` text DEFAULT NULL,
-  `CourseFee` decimal(10,2) DEFAULT NULL
+  `CourseFee` decimal(10,2) DEFAULT NULL,
+  `Stream` varchar(50) DEFAULT NULL,
+  `TeacherID` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -497,7 +499,8 @@ ALTER TABLE `batch`
 -- Indexes for table `course`
 --
 ALTER TABLE `course`
-  ADD PRIMARY KEY (`CourseID`);
+  ADD PRIMARY KEY (`CourseID`),
+  ADD KEY `TeacherID` (`TeacherID`);
 
 --
 -- Indexes for table `course_session`
@@ -813,6 +816,12 @@ ALTER TABLE `attendance`
 --
 ALTER TABLE `batch`
   ADD CONSTRAINT `batch_ibfk_1` FOREIGN KEY (`CourseID`) REFERENCES `course` (`CourseID`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `course`
+--
+ALTER TABLE `course`
+  ADD CONSTRAINT `course_ibfk_1` FOREIGN KEY (`TeacherID`) REFERENCES `teacher` (`TeacherID`);
 
 --
 -- Constraints for table `course_session`

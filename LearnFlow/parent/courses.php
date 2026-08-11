@@ -1,3 +1,245 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID, su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function courses_first_name($fullName)
+{
+    $parts = preg_split('/\s+/', trim((string) $fullName));
+    return !empty($parts[0]) ? $parts[0] : 'Student';
+}
+
+function courses_course_icon($courseName)
+{
+    $name = strtolower((string) $courseName);
+
+    if (strpos($name, 'math') !== false) {
+        return 'fa-calculator';
+    }
+    if (strpos($name, 'physics') !== false) {
+        return 'fa-atom';
+    }
+    if (strpos($name, 'chemistry') !== false) {
+        return 'fa-flask';
+    }
+    if (strpos($name, 'english') !== false) {
+        return 'fa-language';
+    }
+    if (strpos($name, 'web') !== false || strpos($name, 'develop') !== false) {
+        return 'fa-code';
+    }
+
+    return 'fa-book';
+}
+
+function courses_banner_class($courseName)
+{
+    $name = strtolower((string) $courseName);
+
+    if (strpos($name, 'math') !== false) {
+        return 'mathematics-banner';
+    }
+    if (strpos($name, 'physics') !== false) {
+        return 'physics-banner';
+    }
+    if (strpos($name, 'chemistry') !== false) {
+        return 'chemistry-banner';
+    }
+    if (strpos($name, 'english') !== false) {
+        return 'english-banner';
+    }
+
+    return 'english-banner';
+}
+
+/**
+ * Static Course Progress placeholders (no institute-wide formula yet).
+ * See scripts/academic_progress_calculation.md
+ */
+function courses_static_progress_pct($courseId)
+{
+    $placeholders = [
+        1 => 70,
+        2 => 80,
+        3 => 72,
+        4 => 65,
+        5 => 100,
+    ];
+
+    return $placeholders[(int) $courseId] ?? 75;
+}
+
+$parentName = $parent['Name'];
+$parentInitials = parent_initials($parentName);
+
+$studentFirstName = 'Student';
+$courseCards = [];
+$enrolledCount = 0;
+$avgAttendanceDisplay = '—';
+$assignmentCompletionDisplay = '—';
+// Static Average Progress placeholder (deferred formula)
+$averageProgressDisplay = '79%';
+
+if ($linkedStudent) {
+    $studentId = (int) $linkedStudent['StudentID'];
+    $studentFirstName = courses_first_name($linkedStudent['StudentName']);
+
+    $enrollStmt = $conn->prepare(
+        "SELECT e.EnrollmentStatus, e.BatchID,
+                c.CourseID, c.CourseName, c.Stream,
+                tu.Name AS TeacherName,
+                (SELECT COUNT(*) FROM module m WHERE m.BatchID = e.BatchID) AS ModuleCount,
+                (SELECT COUNT(*) FROM attendance a
+                  WHERE a.StudentID = ? AND a.CourseID = c.CourseID) AS AttTotal,
+                (SELECT COUNT(*) FROM attendance a
+                  WHERE a.StudentID = ? AND a.CourseID = c.CourseID
+                    AND a.Status = 'Present') AS AttPresent,
+                (SELECT COUNT(*) FROM assignment a
+                  INNER JOIN test t ON t.TestID = a.TestID
+                  WHERE t.BatchID = e.BatchID) AS AssignTotal,
+                (SELECT COUNT(*) FROM assignment a
+                  INNER JOIN test t ON t.TestID = a.TestID
+                  INNER JOIN assignment_submission s
+                    ON s.TestID = a.TestID AND s.StudentID = ?
+                  WHERE t.BatchID = e.BatchID) AS AssignSubmitted,
+                (SELECT COUNT(*) FROM discussion_post dp
+                  INNER JOIN discussion_forum df ON df.ForumID = dp.ForumID
+                  WHERE df.BatchID = e.BatchID) AS ForumPosts
+         FROM enrollment e
+         INNER JOIN batch b ON b.BatchID = e.BatchID
+         INNER JOIN course c ON c.CourseID = b.CourseID
+         LEFT JOIN users tu ON tu.UserID = c.TeacherID
+         WHERE e.StudentID = ?
+         ORDER BY c.CourseName ASC"
+    );
+    $enrollStmt->bind_param("iiii", $studentId, $studentId, $studentId, $studentId);
+    $enrollStmt->execute();
+    $enrollResult = $enrollStmt->get_result();
+
+    $attPresentSum = 0;
+    $attTotalSum = 0;
+    $assignSubmittedSum = 0;
+    $assignTotalSum = 0;
+
+    while ($row = $enrollResult->fetch_assoc()) {
+        $courseId = (int) $row['CourseID'];
+        $attTotal = (int) $row['AttTotal'];
+        $attPresent = (int) $row['AttPresent'];
+        $assignTotal = (int) $row['AssignTotal'];
+        $assignSubmitted = (int) $row['AssignSubmitted'];
+
+        $attPresentSum += $attPresent;
+        $attTotalSum += $attTotal;
+        $assignSubmittedSum += $assignSubmitted;
+        $assignTotalSum += $assignTotal;
+
+        $attendancePct = $attTotal > 0
+            ? (int) round(($attPresent / $attTotal) * 100)
+            : null;
+
+        $statusRaw = trim((string) ($row['EnrollmentStatus'] ?? 'Active'));
+        $isCompleted = strcasecmp($statusRaw, 'Completed') === 0;
+        $stream = trim((string) ($row['Stream'] ?? ''));
+        $teacherName = trim((string) ($row['TeacherName'] ?? ''));
+        $progressPct = courses_static_progress_pct($courseId);
+
+        $courseCards[] = [
+            'course_id' => $courseId,
+            'course_name' => $row['CourseName'],
+            'stream' => $stream !== '' ? strtoupper($stream) : 'GENERAL',
+            'teacher_name' => $teacherName !== '' ? $teacherName : '—',
+            'module_count' => (int) $row['ModuleCount'],
+            'status_label' => $isCompleted ? 'Completed' : ($statusRaw !== '' ? $statusRaw : 'Active'),
+            'is_completed' => $isCompleted,
+            'banner_class' => courses_banner_class($row['CourseName']),
+            'icon' => courses_course_icon($row['CourseName']),
+            'progress_pct' => $progressPct,
+            'attendance_display' => $attendancePct !== null ? $attendancePct . '%' : '—',
+            'assignments_display' => $assignTotal > 0
+                ? $assignSubmitted . '/' . $assignTotal
+                : '0/0',
+            'forum_posts' => (int) $row['ForumPosts'],
+        ];
+    }
+
+    $enrollStmt->close();
+
+    $enrolledCount = count($courseCards);
+
+    if ($attTotalSum > 0) {
+        $avgAttendanceDisplay = (int) round(($attPresentSum / $attTotalSum) * 100) . '%';
+    }
+
+    if ($assignTotalSum > 0) {
+        $assignmentCompletionDisplay = (int) round(($assignSubmittedSum / $assignTotalSum) * 100) . '%';
+    }
+}
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +597,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +605,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -398,7 +640,7 @@
                 <div>
 
                     <h1>
-                        Alex's Course Participation
+                        <?php echo htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8'); ?>'s Course Participation
                     </h1>
 
                     <p>
@@ -443,7 +685,7 @@
                     <div class="stat-info">
 
                         <span class="stat-number">
-                            4
+                            <?php echo (int) $enrolledCount; ?>
                         </span>
 
                         <span class="stat-label">
@@ -470,7 +712,7 @@
                     <div class="stat-info">
 
                         <span class="stat-number">
-                            94%
+                            <?php echo htmlspecialchars($avgAttendanceDisplay, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="stat-label">
@@ -497,7 +739,7 @@
                     <div class="stat-info">
 
                         <span class="stat-number">
-                            83%
+                            <?php echo htmlspecialchars($assignmentCompletionDisplay, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="stat-label">
@@ -524,7 +766,7 @@
                     <div class="stat-info">
 
                         <span class="stat-number">
-                            79%
+                            <?php echo htmlspecialchars($averageProgressDisplay, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="stat-label">
@@ -547,546 +789,157 @@
 
             <div class="course-grid">
 
+                <?php if (!$linkedStudent): ?>
+
+                    <p>
+                        No linked student found for this parent account.
+                    </p>
+
+                <?php elseif (empty($courseCards)): ?>
+
+                    <p>
+                        No course enrollments found for
+                        <?php echo htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8'); ?>.
+                    </p>
+
+                <?php else: ?>
+
+                    <?php foreach ($courseCards as $card): ?>
+
+                        <div class="course-card">
 
 
-                <!-- COURSE 1 -->
+                            <div class="course-card-banner <?php echo htmlspecialchars($card['banner_class'], ENT_QUOTES, 'UTF-8'); ?>">
 
-                <div class="course-card">
-
-
-                    <div class="course-card-banner mathematics-banner">
-
-                        <i class="fa-solid fa-calculator"></i>
-
-                        <span>
-                            PHYSICAL SCIENCE
-                        </span>
-
-                    </div>
-
-
-                    <div class="course-card-body">
-
-
-                        <div class="course-status">
-
-                            <span class="course-active">
-                                Active
-                            </span>
-
-                        </div>
-
-
-                        <h3>
-                            Combined Mathematics
-                        </h3>
-
-
-                        <div class="course-meta">
-
-                            <span>
-
-                                <i class="fa-solid fa-user-tie"></i>
-
-                                Mr. Perera
-
-                            </span>
-
-                            <span>
-
-                                <i class="fa-solid fa-layer-group"></i>
-
-                                12 Modules
-
-                            </span>
-
-                        </div>
-
-
-                        <div class="course-progress">
-
-
-                            <div class="course-progress-label">
+                                <i class="fa-solid <?php echo htmlspecialchars($card['icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
 
                                 <span>
-                                    Course Progress
+                                    <?php echo htmlspecialchars($card['stream'], ENT_QUOTES, 'UTF-8'); ?>
                                 </span>
 
-                                <strong>
-                                    80%
-                                </strong>
-
                             </div>
 
 
-                            <div class="course-progress-bar">
+                            <div class="course-card-body">
 
-                                <div
-                                    class="course-progress-fill"
-                                    style="width: 80%;"
-                                ></div>
 
-                            </div>
+                                <div class="course-status<?php echo $card['is_completed'] ? ' completed-status' : ''; ?>">
 
+                                    <span<?php echo $card['is_completed'] ? '' : ' class="course-active"'; ?>>
+                                        <?php echo htmlspecialchars($card['status_label'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </span>
 
-                        </div>
+                                </div>
 
 
-                        <div class="participation-metrics">
+                                <h3>
+                                    <?php echo htmlspecialchars($card['course_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                </h3>
 
 
-                            <div class="participation-metric">
+                                <div class="course-meta">
 
-                                <strong>96%</strong>
+                                    <span>
 
-                                <span>Attendance</span>
+                                        <i class="fa-solid fa-user-tie"></i>
 
-                            </div>
+                                        <?php echo htmlspecialchars($card['teacher_name'], ENT_QUOTES, 'UTF-8'); ?>
 
+                                    </span>
 
-                            <div class="participation-metric">
+                                    <span>
 
-                                <strong>5/6</strong>
+                                        <i class="fa-solid fa-layer-group"></i>
 
-                                <span>Assignments</span>
+                                        <?php echo (int) $card['module_count']; ?> Modules
 
-                            </div>
+                                    </span>
 
+                                </div>
 
-                            <div class="participation-metric">
 
-                                <strong>12</strong>
+                                <div class="course-progress">
 
-                                <span>Forum Posts</span>
 
-                            </div>
+                                    <div class="course-progress-label">
 
+                                        <span>
+                                            Course Progress
+                                        </span>
 
-                        </div>
+                                        <strong>
+                                            <?php echo (int) $card['progress_pct']; ?>%
+                                        </strong>
 
+                                    </div>
 
-                        <a
-                            href="progress.php"
-                            class="view-details-btn"
-                        >
 
-                            View Details
+                                    <div class="course-progress-bar">
 
-                            <i class="fa-solid fa-arrow-right"></i>
+                                        <div
+                                            class="course-progress-fill<?php echo $card['is_completed'] ? ' completed-fill' : ''; ?>"
+                                            style="width: <?php echo (int) $card['progress_pct']; ?>%;"
+                                        ></div>
 
-                        </a>
+                                    </div>
 
 
-                    </div>
+                                </div>
 
 
-                </div>
+                                <div class="participation-metrics">
 
 
+                                    <div class="participation-metric">
 
-                <!-- COURSE 2 -->
+                                        <strong><?php echo htmlspecialchars($card['attendance_display'], ENT_QUOTES, 'UTF-8'); ?></strong>
 
-                <div class="course-card">
+                                        <span>Attendance</span>
 
+                                    </div>
 
-                    <div class="course-card-banner chemistry-banner">
 
-                        <i class="fa-solid fa-flask"></i>
+                                    <div class="participation-metric">
 
-                        <span>
-                            PHYSICAL SCIENCE
-                        </span>
+                                        <strong><?php echo htmlspecialchars($card['assignments_display'], ENT_QUOTES, 'UTF-8'); ?></strong>
 
-                    </div>
+                                        <span>Assignments</span>
 
+                                    </div>
 
-                    <div class="course-card-body">
 
+                                    <div class="participation-metric">
 
-                        <div class="course-status">
+                                        <strong><?php echo (int) $card['forum_posts']; ?></strong>
 
-                            <span class="course-active">
-                                Active
-                            </span>
+                                        <span>Forum Posts</span>
 
-                        </div>
+                                    </div>
 
 
-                        <h3>
-                            Chemistry
-                        </h3>
+                                </div>
 
 
-                        <div class="course-meta">
+                                <a
+                                    href="progress.php"
+                                    class="view-details-btn"
+                                >
 
-                            <span>
+                                    View Details
 
-                                <i class="fa-solid fa-user-tie"></i>
+                                    <i class="fa-solid fa-arrow-right"></i>
 
-                                Dr. Fernando
+                                </a>
 
-                            </span>
-
-                            <span>
-
-                                <i class="fa-solid fa-layer-group"></i>
-
-                                10 Modules
-
-                            </span>
-
-                        </div>
-
-
-                        <div class="course-progress">
-
-
-                            <div class="course-progress-label">
-
-                                <span>
-                                    Course Progress
-                                </span>
-
-                                <strong>
-                                    65%
-                                </strong>
-
-                            </div>
-
-
-                            <div class="course-progress-bar">
-
-                                <div
-                                    class="course-progress-fill"
-                                    style="width: 65%;"
-                                ></div>
 
                             </div>
 
 
                         </div>
 
+                    <?php endforeach; ?>
 
-                        <div class="participation-metrics">
-
-
-                            <div class="participation-metric">
-
-                                <strong>90%</strong>
-
-                                <span>Attendance</span>
-
-                            </div>
-
-
-                            <div class="participation-metric">
-
-                                <strong>4/6</strong>
-
-                                <span>Assignments</span>
-
-                            </div>
-
-
-                            <div class="participation-metric">
-
-                                <strong>8</strong>
-
-                                <span>Forum Posts</span>
-
-                            </div>
-
-
-                        </div>
-
-
-                        <a
-                            href="progress.php"
-                            class="view-details-btn"
-                        >
-
-                            View Details
-
-                            <i class="fa-solid fa-arrow-right"></i>
-
-                        </a>
-
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- COURSE 3 -->
-
-                <div class="course-card">
-
-
-                    <div class="course-card-banner physics-banner">
-
-                        <i class="fa-solid fa-atom"></i>
-
-                        <span>
-                            PHYSICAL SCIENCE
-                        </span>
-
-                    </div>
-
-
-                    <div class="course-card-body">
-
-
-                        <div class="course-status">
-
-                            <span class="course-active">
-                                Active
-                            </span>
-
-                        </div>
-
-
-                        <h3>
-                            Physics
-                        </h3>
-
-
-                        <div class="course-meta">
-
-                            <span>
-
-                                <i class="fa-solid fa-user-tie"></i>
-
-                                Mr. Silva
-
-                            </span>
-
-                            <span>
-
-                                <i class="fa-solid fa-layer-group"></i>
-
-                                14 Modules
-
-                            </span>
-
-                        </div>
-
-
-                        <div class="course-progress">
-
-
-                            <div class="course-progress-label">
-
-                                <span>
-                                    Course Progress
-                                </span>
-
-                                <strong>
-                                    72%
-                                </strong>
-
-                            </div>
-
-
-                            <div class="course-progress-bar">
-
-                                <div
-                                    class="course-progress-fill"
-                                    style="width: 72%;"
-                                ></div>
-
-                            </div>
-
-
-                        </div>
-
-
-                        <div class="participation-metrics">
-
-
-                            <div class="participation-metric">
-
-                                <strong>92%</strong>
-
-                                <span>Attendance</span>
-
-                            </div>
-
-
-                            <div class="participation-metric">
-
-                                <strong>5/6</strong>
-
-                                <span>Assignments</span>
-
-                            </div>
-
-
-                            <div class="participation-metric">
-
-                                <strong>10</strong>
-
-                                <span>Forum Posts</span>
-
-                            </div>
-
-
-                        </div>
-
-
-                        <a
-                            href="progress.php"
-                            class="view-details-btn"
-                        >
-
-                            View Details
-
-                            <i class="fa-solid fa-arrow-right"></i>
-
-                        </a>
-
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- COURSE 4 -->
-
-                <div class="course-card">
-
-
-                    <div class="course-card-banner english-banner">
-
-                        <i class="fa-solid fa-language"></i>
-
-                        <span>
-                            GENERAL
-                        </span>
-
-                    </div>
-
-
-                    <div class="course-card-body">
-
-
-                        <div class="course-status completed-status">
-
-                            <span>
-                                Completed
-                            </span>
-
-                        </div>
-
-
-                        <h3>
-                            General English
-                        </h3>
-
-
-                        <div class="course-meta">
-
-                            <span>
-
-                                <i class="fa-solid fa-user-tie"></i>
-
-                                Ms. Perera
-
-                            </span>
-
-                            <span>
-
-                                <i class="fa-solid fa-layer-group"></i>
-
-                                8 Modules
-
-                            </span>
-
-                        </div>
-
-
-                        <div class="course-progress">
-
-
-                            <div class="course-progress-label">
-
-                                <span>
-                                    Course Progress
-                                </span>
-
-                                <strong>
-                                    100%
-                                </strong>
-
-                            </div>
-
-
-                            <div class="course-progress-bar">
-
-                                <div
-                                    class="course-progress-fill completed-fill"
-                                    style="width: 100%;"
-                                ></div>
-
-                            </div>
-
-
-                        </div>
-
-
-                        <div class="participation-metrics">
-
-
-                            <div class="participation-metric">
-
-                                <strong>98%</strong>
-
-                                <span>Attendance</span>
-
-                            </div>
-
-
-                            <div class="participation-metric">
-
-                                <strong>6/6</strong>
-
-                                <span>Assignments</span>
-
-                            </div>
-
-
-                            <div class="participation-metric">
-
-                                <strong>15</strong>
-
-                                <span>Forum Posts</span>
-
-                            </div>
-
-
-                        </div>
-
-
-                        <a
-                            href="progress.php"
-                            class="view-details-btn"
-                        >
-
-                            View Details
-
-                            <i class="fa-solid fa-arrow-right"></i>
-
-                        </a>
-
-
-                    </div>
-
-
-                </div>
-
+                <?php endif; ?>
 
             </div>
 

@@ -157,6 +157,23 @@ function progress_trend_from_scores(array $scores)
     return ['label' => 'Stable', 'slug' => 'stable', 'icon' => 'fa-minus'];
 }
 
+/**
+ * Static Course Progress placeholders (no institute-wide formula yet).
+ * See scripts/academic_progress_calculation.md
+ */
+function progress_static_progress_pct($courseId)
+{
+    $placeholders = [
+        1 => 70,
+        2 => 80,
+        3 => 72,
+        4 => 65,
+        5 => 100,
+    ];
+
+    return $placeholders[(int) $courseId] ?? 75;
+}
+
 $parentName = $parent['Name'];
 $parentInitials = parent_initials($parentName);
 
@@ -168,10 +185,38 @@ $improvingCount = 0;
 $needsAttentionCount = 0;
 $averageGrade = '—';
 $hasExamData = false;
+$overviewCourses = [];
 
 if ($linkedStudent) {
     $studentId = (int) $linkedStudent['StudentID'];
     $studentFirstName = progress_first_name($linkedStudent['StudentName']);
+
+    $overviewStmt = $conn->prepare(
+        "SELECT c.CourseID, c.CourseName, c.Stream, tu.Name AS TeacherName
+         FROM enrollment e
+         INNER JOIN batch b ON b.BatchID = e.BatchID
+         INNER JOIN course c ON c.CourseID = b.CourseID
+         LEFT JOIN users tu ON tu.UserID = c.TeacherID
+         WHERE e.StudentID = ?
+         ORDER BY c.CourseName ASC"
+    );
+    $overviewStmt->bind_param("i", $studentId);
+    $overviewStmt->execute();
+    $overviewResult = $overviewStmt->get_result();
+    while ($row = $overviewResult->fetch_assoc()) {
+        $courseId = (int) $row['CourseID'];
+        $teacherName = trim((string) ($row['TeacherName'] ?? ''));
+        $stream = trim((string) ($row['Stream'] ?? ''));
+        $overviewCourses[] = [
+            'course_id' => $courseId,
+            'course_name' => $row['CourseName'],
+            'teacher_name' => $teacherName !== '' ? $teacherName : '—',
+            'stream' => $stream !== '' ? $stream : 'General',
+            'icon' => progress_course_icon($row['CourseName']),
+            'progress_pct' => progress_static_progress_pct($courseId),
+        ];
+    }
+    $overviewStmt->close();
 
     $examStmt = $conn->prepare(
         "SELECT c.CourseID, c.CourseName, t.Title, t.TotalMarks,
@@ -752,7 +797,8 @@ $pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Acad
 
 
             <!-- =================================================
-                 COURSE PROGRESS OVERVIEW (static — formula deferred)
+                 COURSE PROGRESS OVERVIEW
+                 (names + teachers live; progress % static — formula deferred)
             ================================================== -->
 
             <div class="progress-section">
@@ -782,236 +828,86 @@ $pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Acad
                     </div>
 
 
+                    <?php if (!$linkedStudent): ?>
 
-                    <!-- Course 1 -->
+                        <p>
+                            No linked student found for this parent account.
+                        </p>
 
-                    <div class="course-item">
+                    <?php elseif (empty($overviewCourses)): ?>
 
+                        <p>
+                            No course enrollments found for
+                            <?php echo htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8'); ?>.
+                        </p>
 
-                        <div class="course-icon">
+                    <?php else: ?>
 
-                            <i class="fa-solid fa-calculator"></i>
+                        <?php foreach ($overviewCourses as $ov): ?>
 
-                        </div>
-
-
-                        <div class="course-info">
-
-                            <h4>
-                                Combined Mathematics
-                            </h4>
-
-                            <p>
-                                Mr. Perera • Advanced Level
-                            </p>
-
-                        </div>
+                            <div class="course-item">
 
 
-                        <div class="progress-container">
+                                <div class="course-icon">
+
+                                    <i class="fa-solid <?php echo htmlspecialchars($ov['icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
+
+                                </div>
 
 
-                            <div class="progress-label">
+                                <div class="course-info">
 
-                                <span>
-                                    Progress
-                                </span>
+                                    <h4>
+                                        <?php echo htmlspecialchars($ov['course_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </h4>
 
-                                <span>
-                                    80%
-                                </span>
+                                    <p>
+                                        <?php
+                                        echo htmlspecialchars(
+                                            $ov['teacher_name'] . ' • ' . $ov['stream'],
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        );
+                                        ?>
+                                    </p>
+
+                                </div>
+
+
+                                <div class="progress-container">
+
+
+                                    <div class="progress-label">
+
+                                        <span>
+                                            Progress
+                                        </span>
+
+                                        <span>
+                                            <?php echo (int) $ov['progress_pct']; ?>%
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="progress-bar">
+
+                                        <div
+                                            class="progress-fill"
+                                            style="width: <?php echo (int) $ov['progress_pct']; ?>%;"
+                                        ></div>
+
+                                    </div>
+
+
+                                </div>
+
 
                             </div>
 
+                        <?php endforeach; ?>
 
-                            <div class="progress-bar">
-
-                                <div
-                                    class="progress-fill"
-                                    style="width: 80%;"
-                                ></div>
-
-                            </div>
-
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- Course 2 -->
-
-                    <div class="course-item">
-
-
-                        <div class="course-icon">
-
-                            <i class="fa-solid fa-flask"></i>
-
-                        </div>
-
-
-                        <div class="course-info">
-
-                            <h4>
-                                Chemistry
-                            </h4>
-
-                            <p>
-                                Dr. Fernando • Advanced Level
-                            </p>
-
-                        </div>
-
-
-                        <div class="progress-container">
-
-
-                            <div class="progress-label">
-
-                                <span>
-                                    Progress
-                                </span>
-
-                                <span>
-                                    65%
-                                </span>
-
-                            </div>
-
-
-                            <div class="progress-bar">
-
-                                <div
-                                    class="progress-fill"
-                                    style="width: 65%;"
-                                ></div>
-
-                            </div>
-
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- Course 3 -->
-
-                    <div class="course-item">
-
-
-                        <div class="course-icon">
-
-                            <i class="fa-solid fa-atom"></i>
-
-                        </div>
-
-
-                        <div class="course-info">
-
-                            <h4>
-                                Physics
-                            </h4>
-
-                            <p>
-                                Mr. Silva • Advanced Level
-                            </p>
-
-                        </div>
-
-
-                        <div class="progress-container">
-
-
-                            <div class="progress-label">
-
-                                <span>
-                                    Progress
-                                </span>
-
-                                <span>
-                                    72%
-                                </span>
-
-                            </div>
-
-
-                            <div class="progress-bar">
-
-                                <div
-                                    class="progress-fill"
-                                    style="width: 72%;"
-                                ></div>
-
-                            </div>
-
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- Course 4 -->
-
-                    <div class="course-item">
-
-
-                        <div class="course-icon">
-
-                            <i class="fa-solid fa-language"></i>
-
-                        </div>
-
-
-                        <div class="course-info">
-
-                            <h4>
-                                General English
-                            </h4>
-
-                            <p>
-                                Ms. Perera • General
-                            </p>
-
-                        </div>
-
-
-                        <div class="progress-container">
-
-
-                            <div class="progress-label">
-
-                                <span>
-                                    Progress
-                                </span>
-
-                                <span>
-                                    100%
-                                </span>
-
-                            </div>
-
-
-                            <div class="progress-bar">
-
-                                <div
-                                    class="progress-fill"
-                                    style="width: 100%;"
-                                ></div>
-
-                            </div>
-
-
-                        </div>
-
-
-                    </div>
+                    <?php endif; ?>
 
 
                 </div>
