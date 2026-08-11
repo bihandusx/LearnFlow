@@ -1,7 +1,7 @@
 <?php
 $host = "localhost";
 $username = "root";
-$password = "";
+$password = "root";
 $database = "learnflow_db";
 
 // Create connection

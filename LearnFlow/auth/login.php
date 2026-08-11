@@ -45,8 +45,18 @@ if(isset($_POST['login']))
             $_SESSION['name'] = $user['fullname'];
             $_SESSION['role'] = $user['role'];
 
-
-            header("Location: dashboard.php");
+            // Redirect to role-specific dashboard
+            if ($role === 'Student') {
+                header("Location: ../student/dashboard.php");
+            } elseif ($role === 'Teacher') {
+                header("Location: ../teacher/dashboard.php");
+            } elseif ($role === 'Parent') {
+                header("Location: ../parent/dashboard.php");
+            } elseif ($role === 'Admin') {
+                header("Location: ../admin/dashboard.php");
+            } else {
+                header("Location: ../student/dashboard.php");
+            }
             exit();
 
         }
@@ -249,6 +259,16 @@ STUDENT
 <input type="radio" name="role" value="Teacher">
 
 TEACHER
+
+</label>
+
+
+
+<label class="role-btn">
+
+<input type="radio" name="role" value="Parent">
+
+PARENT
 
 </label>
 

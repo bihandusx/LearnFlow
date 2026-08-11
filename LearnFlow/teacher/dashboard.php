@@ -28,7 +28,7 @@ $projectName = 'LearnFlow';
             <a href="resources.php" class="menu-link"><i class="fas fa-folder-open"></i>Resources</a>
             <a href="recordings.php" class="menu-link"><i class="fas fa-video"></i>Recordings</a>
             <a href="discussions.php" class="menu-link"><i class="fas fa-comments"></i>Discussions</a>
-            <a href="#" class="menu-link logout-link"><i class="fas fa-sign-out-alt"></i>Logout</a>
+            <a href="../auth/logout.php" class="menu-link logout-link"><i class="fas fa-sign-out-alt"></i>Logout</a>
         </nav>
     </aside>
     <div class="content-area">

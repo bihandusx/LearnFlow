@@ -398,6 +398,16 @@ TEACHER
 
 <label class="role-btn">
 
+<input type="radio" name="role" value="Parent">
+
+PARENT
+
+</label>
+
+
+
+<label class="role-btn">
+
 <input type="radio" name="role" value="Admin">
 
 ADMIN

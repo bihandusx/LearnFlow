@@ -7,7 +7,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Student Dashboard | LEARNFLOW</title>
+    <title>Parent Dashboard | LEARNFLOW</title>
 
 
     <!-- Google Font -->
@@ -26,11 +26,11 @@
     >
 
 
-    <!-- Student CSS -->
+    <!-- Parent CSS -->
 
     <link
         rel="stylesheet"
-        href="../css/student.css"
+        href="../css/parent.css"
     >
 
 </head>
@@ -99,33 +99,33 @@
             </a>
 
 
-            <!-- Learning -->
+            <!-- Student Monitoring -->
 
             <div class="nav-section-title">
-                Learning
+                Student Monitoring
             </div>
 
 
             <a
-                href="courses.php"
+                href="attendance.php"
                 class="nav-link"
             >
 
-                <i class="fa-solid fa-book-open"></i>
+                <i class="fa-solid fa-calendar-check"></i>
 
-                <span>My Courses</span>
+                <span>Attendance</span>
 
             </a>
 
 
             <a
-                href="materials.php"
+                href="progress.php"
                 class="nav-link"
             >
 
-                <i class="fa-solid fa-file-lines"></i>
+                <i class="fa-solid fa-chart-line"></i>
 
-                <span>Learning Materials</span>
+                <span>Academic Progress</span>
 
             </a>
 
@@ -143,58 +143,34 @@
 
 
             <a
-                href="quizzes.php"
+                href="results.php"
                 class="nav-link"
             >
 
-                <i class="fa-solid fa-circle-question"></i>
+                <i class="fa-solid fa-award"></i>
 
-                <span>Quizzes</span>
+                <span>Examination Results</span>
 
             </a>
 
 
             <a
-                href="exams.php"
+                href="courses.php"
                 class="nav-link"
             >
 
-                <i class="fa-solid fa-clipboard-check"></i>
+                <i class="fa-solid fa-book-open"></i>
 
-                <span>Examinations</span>
+                <span>Course Participation</span>
 
             </a>
 
 
-            <!-- Progress -->
+            <!-- Communication -->
 
             <div class="nav-section-title">
-                Progress & Communication
+                Communication
             </div>
-
-
-            <a
-                href="grades.php"
-                class="nav-link"
-            >
-
-                <i class="fa-solid fa-chart-column"></i>
-
-                <span>Grades & Results</span>
-
-            </a>
-
-
-            <a
-                href="progress.php"
-                class="nav-link"
-            >
-
-                <i class="fa-solid fa-chart-line"></i>
-
-                <span>My Progress</span>
-
-            </a>
 
 
             <a
@@ -210,25 +186,25 @@
 
 
             <a
-                href="schedule.php"
-                class="nav-link"
-            >
-
-                <i class="fa-solid fa-calendar-days"></i>
-
-                <span>Class Schedule</span>
-
-            </a>
-
-
-            <a
-                href="forum.php"
+                href="contact.php"
                 class="nav-link"
             >
 
                 <i class="fa-solid fa-comments"></i>
 
-                <span>Discussion Forum</span>
+                <span>Contact Teachers/Admins</span>
+
+            </a>
+
+
+            <a
+                href="meetings.php"
+                class="nav-link"
+            >
+
+                <i class="fa-solid fa-handshake"></i>
+
+                <span>Request Meeting</span>
 
             </a>
 
@@ -241,25 +217,44 @@
 
 
             <a
-                href="tutes.php"
-                class="nav-link"
-            >
-
-                <i class="fa-solid fa-store"></i>
-
-                <span>Digital Tute Store</span>
-
-            </a>
-
-
-            <a
                 href="payments.php"
                 class="nav-link"
             >
 
                 <i class="fa-solid fa-credit-card"></i>
 
-                <span>Payment History</span>
+                <span>Payment Status</span>
+
+            </a>
+
+
+            <a
+                href="receipts.php"
+                class="nav-link"
+            >
+
+                <i class="fa-solid fa-receipt"></i>
+
+                <span>Payment Receipts</span>
+
+            </a>
+
+
+            <!-- Settings -->
+
+            <div class="nav-section-title">
+                Settings
+            </div>
+
+
+            <a
+                href="emergency-contact.php"
+                class="nav-link"
+            >
+
+                <i class="fa-solid fa-phone-volume"></i>
+
+                <span>Emergency Contact</span>
 
             </a>
 
@@ -319,10 +314,10 @@
 
                     <div>
 
-                        <h2>Student Dashboard</h2>
+                        <h2>Parent Dashboard</h2>
 
                         <p>
-                            Welcome back to your learning space.
+                            Stay connected with your child's learning journey.
                         </p>
 
                     </div>
@@ -359,7 +354,7 @@
 
                     <div class="user-avatar">
 
-                        AS
+                        NF
 
                     </div>
 
@@ -367,11 +362,11 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Alex Silva
+                            Nimal Fernando
                         </span>
 
                         <span class="user-role">
-                            Student
+                            Parent
                         </span>
 
                     </div>
@@ -404,12 +399,12 @@
 
 
                     <h1>
-                        Welcome back, Alex! 👋
+                        Welcome back, Nimal! 👋
                     </h1>
 
 
                     <p>
-                        Continue your learning journey and achieve your academic goals.
+                        Here's how Alex is progressing in their studies.
                     </p>
 
 
@@ -418,7 +413,7 @@
 
                 <div class="welcome-icon">
 
-                    <i class="fa-solid fa-graduation-cap"></i>
+                    <i class="fa-solid fa-people-roof"></i>
 
                 </div>
 
@@ -434,14 +429,14 @@
             <div class="stats-grid">
 
 
-                <!-- Courses -->
+                <!-- Attendance -->
 
                 <div class="stat-card">
 
 
                     <div class="stat-icon">
 
-                        <i class="fa-solid fa-book-open"></i>
+                        <i class="fa-solid fa-calendar-check"></i>
 
                     </div>
 
@@ -449,11 +444,11 @@
                     <div class="stat-info">
 
                         <span class="stat-number">
-                            4
+                            94%
                         </span>
 
                         <span class="stat-label">
-                            Enrolled Courses
+                            Attendance Rate
                         </span>
 
                     </div>
@@ -492,35 +487,6 @@
 
 
 
-                <!-- Progress -->
-
-                <div class="stat-card">
-
-
-                    <div class="stat-icon">
-
-                        <i class="fa-solid fa-chart-line"></i>
-
-                    </div>
-
-
-                    <div class="stat-info">
-
-                        <span class="stat-number">
-                            72%
-                        </span>
-
-                        <span class="stat-label">
-                            Average Progress
-                        </span>
-
-                    </div>
-
-
-                </div>
-
-
-
                 <!-- Results -->
 
                 <div class="stat-card">
@@ -549,6 +515,35 @@
                 </div>
 
 
+
+                <!-- Payments -->
+
+                <div class="stat-card">
+
+
+                    <div class="stat-icon">
+
+                        <i class="fa-solid fa-credit-card"></i>
+
+                    </div>
+
+
+                    <div class="stat-info">
+
+                        <span class="stat-number">
+                            LKR 5,000
+                        </span>
+
+                        <span class="stat-label">
+                            Payment Due
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+
             </div>
 
 
@@ -565,7 +560,7 @@
                 <div>
 
 
-                    <!-- MY COURSES -->
+                    <!-- COURSE PARTICIPATION -->
 
                     <div class="dashboard-card">
 
@@ -574,7 +569,7 @@
 
 
                             <h3>
-                                My Courses
+                                Course Participation
                             </h3>
 
 
@@ -769,7 +764,7 @@
 
 
 
-                    <!-- UPCOMING ASSIGNMENTS -->
+                    <!-- UPCOMING ASSIGNMENTS & EXAMS -->
 
                     <div class="dashboard-card">
 
@@ -778,7 +773,7 @@
 
 
                             <h3>
-                                Upcoming Assignments
+                                Upcoming Assignments & Exams
                             </h3>
 
 
@@ -839,7 +834,7 @@
 
                             <div class="assignment-icon">
 
-                                <i class="fa-solid fa-file-pen"></i>
+                                <i class="fa-solid fa-clipboard-check"></i>
 
                             </div>
 
@@ -847,11 +842,11 @@
                             <div class="assignment-info">
 
                                 <h4>
-                                    Organic Chemistry Worksheet
+                                    Mid-Term Examination - Physics
                                 </h4>
 
                                 <p>
-                                    Due: 18 August 2026
+                                    Date: 20 August 2026
                                 </p>
 
                             </div>
@@ -859,7 +854,7 @@
 
                             <span class="status-badge status-pending">
 
-                                Pending
+                                Upcoming
 
                             </span>
 
@@ -889,7 +884,7 @@
 
 
                             <h3>
-                                Latest Announcements
+                                Teacher Announcements
                             </h3>
 
 
@@ -940,7 +935,7 @@
 
 
                             <p>
-                                The examination schedule has been published. Please check your timetable.
+                                The examination schedule has been published. Please check the timetable.
                             </p>
 
 
@@ -949,6 +944,104 @@
                                 29 July 2026
 
                             </div>
+
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <!-- PAYMENT STATUS -->
+
+                    <div class="dashboard-card">
+
+
+                        <div class="card-header">
+
+
+                            <h3>
+                                Payment Status
+                            </h3>
+
+
+                            <a
+                                href="payments.php"
+                                class="view-all"
+                            >
+
+                                View All
+
+                            </a>
+
+
+                        </div>
+
+
+
+                        <div class="assignment-item">
+
+
+                            <div class="assignment-icon">
+
+                                <i class="fa-solid fa-credit-card"></i>
+
+                            </div>
+
+
+                            <div class="assignment-info">
+
+                                <h4>
+                                    August Tuition Fee
+                                </h4>
+
+                                <p>
+                                    Due: 05 August 2026
+                                </p>
+
+                            </div>
+
+
+                            <span class="status-badge status-due">
+
+                                Due
+
+                            </span>
+
+
+                        </div>
+
+
+
+                        <div class="assignment-item">
+
+
+                            <div class="assignment-icon">
+
+                                <i class="fa-solid fa-receipt"></i>
+
+                            </div>
+
+
+                            <div class="assignment-info">
+
+                                <h4>
+                                    July Tuition Fee
+                                </h4>
+
+                                <p>
+                                    Paid: 03 July 2026
+                                </p>
+
+                            </div>
+
+
+                            <span class="status-badge status-paid">
+
+                                Paid
+
+                            </span>
 
 
                         </div>
@@ -979,49 +1072,49 @@
 
 
                             <a
-                                href="materials.php"
+                                href="results.php"
                                 class="quick-action"
                             >
 
-                                <i class="fa-solid fa-download"></i>
+                                <i class="fa-solid fa-award"></i>
 
-                                Materials
+                                Exam Results
 
                             </a>
 
 
                             <a
-                                href="assignments.php"
+                                href="attendance.php"
                                 class="quick-action"
                             >
 
-                                <i class="fa-solid fa-upload"></i>
+                                <i class="fa-solid fa-calendar-check"></i>
 
-                                Submit Work
+                                Attendance
 
                             </a>
 
 
                             <a
-                                href="grades.php"
-                                class="quick-action"
-                            >
-
-                                <i class="fa-solid fa-chart-column"></i>
-
-                                View Grades
-
-                            </a>
-
-
-                            <a
-                                href="forum.php"
+                                href="contact.php"
                                 class="quick-action"
                             >
 
                                 <i class="fa-solid fa-comments"></i>
 
-                                Discussion
+                                Contact Teacher
+
+                            </a>
+
+
+                            <a
+                                href="meetings.php"
+                                class="quick-action"
+                            >
+
+                                <i class="fa-solid fa-handshake"></i>
+
+                                Request Meeting
 
                             </a>
 
@@ -1048,9 +1141,9 @@
 
 
 
-<!-- Student JavaScript -->
+<!-- Parent JavaScript -->
 
-<script src="../js/student.js"></script>
+<script src="../js/parent.js"></script>
 
 
 </body>
