@@ -53,7 +53,8 @@ CREATE TABLE `announcement` (
   `Content` text DEFAULT NULL,
   `PublishDate` date DEFAULT NULL,
   `CreatedBy` int(11) DEFAULT NULL,
-  `BatchID` int(11) DEFAULT NULL
+  `BatchID` int(11) DEFAULT NULL,
+  `Priority` varchar(20) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

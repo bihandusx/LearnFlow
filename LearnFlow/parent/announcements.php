@@ -1,3 +1,194 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID, su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function announcements_course_slug($courseName)
+{
+    $slug = strtolower(trim((string) $courseName));
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    return trim($slug, '-') ?: 'course';
+}
+
+function announcements_course_icon($courseName)
+{
+    $name = strtolower((string) $courseName);
+
+    if ($name === '' || $name === 'general') {
+        return 'fa-bullhorn';
+    }
+    if (strpos($name, 'math') !== false) {
+        return 'fa-calculator';
+    }
+    if (strpos($name, 'physics') !== false) {
+        return 'fa-atom';
+    }
+    if (strpos($name, 'chemistry') !== false) {
+        return 'fa-flask';
+    }
+    if (strpos($name, 'english') !== false) {
+        return 'fa-language';
+    }
+    if (strpos($name, 'web') !== false || strpos($name, 'develop') !== false) {
+        return 'fa-code';
+    }
+
+    return 'fa-book';
+}
+
+function announcements_first_name($fullName)
+{
+    $parts = preg_split('/\s+/', trim((string) $fullName));
+    return !empty($parts[0]) ? $parts[0] : 'Student';
+}
+
+$parentName = $parent['Name'];
+$parentInitials = parent_initials($parentName);
+
+$studentFirstName = 'Student';
+$announcementCards = [];
+$courseOptions = [];
+$urgentCount = 0;
+
+if ($linkedStudent) {
+    $studentId = (int) $linkedStudent['StudentID'];
+    $studentFirstName = announcements_first_name($linkedStudent['StudentName']);
+
+    $enrollStmt = $conn->prepare(
+        "SELECT c.CourseID, c.CourseName
+         FROM enrollment e
+         INNER JOIN batch b ON b.BatchID = e.BatchID
+         INNER JOIN course c ON c.CourseID = b.CourseID
+         WHERE e.StudentID = ?
+         ORDER BY c.CourseName ASC"
+    );
+    $enrollStmt->bind_param("i", $studentId);
+    $enrollStmt->execute();
+    $enrollResult = $enrollStmt->get_result();
+
+    while ($row = $enrollResult->fetch_assoc()) {
+        $slug = announcements_course_slug($row['CourseName']);
+        $courseOptions[$slug] = $row['CourseName'];
+    }
+    $enrollStmt->close();
+
+    $annStmt = $conn->prepare(
+        "SELECT a.Title, a.Content, a.PublishDate, a.Priority, a.BatchID,
+                c.CourseID, c.CourseName
+         FROM announcement a
+         LEFT JOIN batch b ON b.BatchID = a.BatchID
+         LEFT JOIN course c ON c.CourseID = b.CourseID
+         WHERE a.BatchID IS NULL
+            OR a.BatchID IN (
+                SELECT e.BatchID FROM enrollment e WHERE e.StudentID = ?
+            )
+         ORDER BY a.PublishDate DESC, a.AnnouncementID DESC"
+    );
+    $annStmt->bind_param("i", $studentId);
+    $annStmt->execute();
+    $annResult = $annStmt->get_result();
+
+    while ($row = $annResult->fetch_assoc()) {
+        $isGeneral = $row['BatchID'] === null || $row['CourseName'] === null;
+        $courseName = $isGeneral ? 'General' : $row['CourseName'];
+        $courseSlug = $isGeneral ? 'general' : announcements_course_slug($courseName);
+        $priorityLabel = trim((string) ($row['Priority'] ?? ''));
+        if ($priorityLabel === '') {
+            $priorityLabel = 'Normal';
+        }
+        $prioritySlug = strtolower($priorityLabel);
+        $isUrgent = strcasecmp($priorityLabel, 'Urgent') === 0;
+        if ($isUrgent) {
+            $urgentCount++;
+        }
+
+        $date = strtotime((string) $row['PublishDate']);
+
+        $announcementCards[] = [
+            'title' => $row['Title'],
+            'content' => $row['Content'],
+            'date_label' => $date ? date('j M Y', $date) : '',
+            'course_name' => $courseName,
+            'course_slug' => $courseSlug,
+            'course_icon' => announcements_course_icon($courseName),
+            'priority_label' => $priorityLabel,
+            'priority_slug' => $prioritySlug,
+            'is_urgent' => $isUrgent,
+        ];
+    }
+
+    $annStmt->close();
+}
+
+$hasRecords = count($announcementCards) > 0;
+$totalCount = count($announcementCards);
+$studentFirstNameSafe = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8');
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +546,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +554,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -402,7 +593,7 @@
                     </h1>
 
                     <p>
-                        Updates and notices shared by Alex's teachers and the institute.
+                        Updates and notices shared by <?php echo $studentFirstNameSafe; ?>'s teachers and the institute.
                     </p>
 
                 </div>
@@ -414,7 +605,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            7
+                            <?php echo (int) $totalCount; ?>
                         </strong>
 
                         <span>
@@ -427,20 +618,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            2
-                        </strong>
-
-                        <span>
-                            Unread
-                        </span>
-
-                    </div>
-
-
-                    <div class="summary-item">
-
-                        <strong>
-                            2
+                            <?php echo (int) $urgentCount; ?>
                         </strong>
 
                         <span>
@@ -478,7 +656,6 @@
                 </div>
 
 
-
                 <select
                     id="courseFilter"
                     class="announcements-filter"
@@ -492,21 +669,13 @@
                         General
                     </option>
 
-                    <option value="mathematics">
-                        Combined Mathematics
+                    <?php foreach ($courseOptions as $slug => $courseName): ?>
+
+                    <option value="<?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php echo htmlspecialchars($courseName, ENT_QUOTES, 'UTF-8'); ?>
                     </option>
 
-                    <option value="physics">
-                        Physics
-                    </option>
-
-                    <option value="chemistry">
-                        Chemistry
-                    </option>
-
-                    <option value="english">
-                        General English
-                    </option>
+                    <?php endforeach; ?>
 
                 </select>
 
@@ -541,160 +710,23 @@
             <div
                 class="announcements-list"
                 id="announcementsList"
+                <?php echo $hasRecords ? '' : 'style="display: none;"'; ?>
             >
 
-
-                <!-- ANNOUNCEMENT 1 -->
-
-                <div
-                    class="announcement-card unread"
-                    data-course="general"
-                    data-priority="urgent"
-                    data-title="Mid-Term Examination Schedule"
-                >
-
-
-                    <div class="announcement-icon urgent-icon">
-
-                        <i class="fa-solid fa-clipboard-check"></i>
-
-                    </div>
-
-
-                    <div class="announcement-body">
-
-
-                        <div class="announcement-top">
-
-                            <div class="announcement-title-row">
-
-                                <h3>
-                                    Mid-Term Examination Schedule
-                                </h3>
-
-                                <span class="unread-dot"></span>
-
-                            </div>
-
-                            <span class="announcement-date">
-                                29 Jul 2026
-                            </span>
-
-                        </div>
-
-
-                        <span class="announcement-course-tag">
-
-                            <i class="fa-solid fa-bullhorn"></i>
-
-                            General
-
-                        </span>
-
-
-                        <p class="announcement-text">
-
-                            The mid-term examination schedule has been published for
-                            all Advanced Level subjects. Please check the class
-                            timetable for exact dates and times.
-
-                        </p>
-
-
-                        <span class="priority-badge priority-urgent">
-                            Urgent
-                        </span>
-
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ANNOUNCEMENT 2 -->
-
-                <div
-                    class="announcement-card unread"
-                    data-course="physics"
-                    data-priority="normal"
-                    data-title="New Physics Recording Available"
-                >
-
-
-                    <div class="announcement-icon">
-
-                        <i class="fa-solid fa-video"></i>
-
-                    </div>
-
-
-                    <div class="announcement-body">
-
-
-                        <div class="announcement-top">
-
-                            <div class="announcement-title-row">
-
-                                <h3>
-                                    New Physics Recording Available
-                                </h3>
-
-                                <span class="unread-dot"></span>
-
-                            </div>
-
-                            <span class="announcement-date">
-                                31 Jul 2026
-                            </span>
-
-                        </div>
-
-
-                        <span class="announcement-course-tag">
-
-                            <i class="fa-solid fa-atom"></i>
-
-                            Physics
-
-                        </span>
-
-
-                        <p class="announcement-text">
-
-                            The latest lesson recording covering mechanics has been
-                            uploaded to the Physics course for students who missed
-                            the live session.
-
-                        </p>
-
-
-                        <span class="priority-badge priority-normal">
-                            Normal
-                        </span>
-
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ANNOUNCEMENT 3 -->
+                <?php foreach ($announcementCards as $card): ?>
 
                 <div
                     class="announcement-card"
-                    data-course="general"
-                    data-priority="urgent"
-                    data-title="Tuition Fee Reminder"
+                    data-course="<?php echo htmlspecialchars($card['course_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                    data-priority="<?php echo htmlspecialchars($card['priority_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                    data-title="<?php echo htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8'); ?>"
+                    data-search="<?php echo htmlspecialchars($card['title'] . ' ' . $card['content'], ENT_QUOTES, 'UTF-8'); ?>"
                 >
 
 
-                    <div class="announcement-icon urgent-icon">
+                    <div class="announcement-icon<?php echo $card['is_urgent'] ? ' urgent-icon' : ''; ?>">
 
-                        <i class="fa-solid fa-credit-card"></i>
+                        <i class="fa-solid <?php echo htmlspecialchars($card['course_icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
 
                     </div>
 
@@ -707,13 +739,13 @@
                             <div class="announcement-title-row">
 
                                 <h3>
-                                    Tuition Fee Reminder
+                                    <?php echo htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8'); ?>
                                 </h3>
 
                             </div>
 
                             <span class="announcement-date">
-                                25 Jul 2026
+                                <?php echo htmlspecialchars($card['date_label'], ENT_QUOTES, 'UTF-8'); ?>
                             </span>
 
                         </div>
@@ -721,24 +753,22 @@
 
                         <span class="announcement-course-tag">
 
-                            <i class="fa-solid fa-bullhorn"></i>
+                            <i class="fa-solid <?php echo htmlspecialchars($card['course_icon'], ENT_QUOTES, 'UTF-8'); ?>"></i>
 
-                            General
+                            <?php echo htmlspecialchars($card['course_name'], ENT_QUOTES, 'UTF-8'); ?>
 
                         </span>
 
 
                         <p class="announcement-text">
 
-                            Kindly settle August tuition fees before the 5th of the
-                            month to avoid late payment charges. Contact the office
-                            for payment plan options.
+                            <?php echo htmlspecialchars($card['content'], ENT_QUOTES, 'UTF-8'); ?>
 
                         </p>
 
 
-                        <span class="priority-badge priority-urgent">
-                            Urgent
+                        <span class="priority-badge <?php echo $card['is_urgent'] ? 'priority-urgent' : 'priority-normal'; ?>">
+                            <?php echo htmlspecialchars($card['priority_label'], ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
 
@@ -747,273 +777,7 @@
 
                 </div>
 
-
-
-                <!-- ANNOUNCEMENT 4 -->
-
-                <div
-                    class="announcement-card"
-                    data-course="chemistry"
-                    data-priority="normal"
-                    data-title="Chemistry Lab Session Rescheduled"
-                >
-
-
-                    <div class="announcement-icon">
-
-                        <i class="fa-solid fa-flask"></i>
-
-                    </div>
-
-
-                    <div class="announcement-body">
-
-
-                        <div class="announcement-top">
-
-                            <div class="announcement-title-row">
-
-                                <h3>
-                                    Chemistry Lab Session Rescheduled
-                                </h3>
-
-                            </div>
-
-                            <span class="announcement-date">
-                                27 Jul 2026
-                            </span>
-
-                        </div>
-
-
-                        <span class="announcement-course-tag">
-
-                            <i class="fa-solid fa-flask"></i>
-
-                            Chemistry
-
-                        </span>
-
-
-                        <p class="announcement-text">
-
-                            This week's practical lab session has been moved from
-                            Wednesday to Friday at the same time due to a venue
-                            change.
-
-                        </p>
-
-
-                        <span class="priority-badge priority-normal">
-                            Normal
-                        </span>
-
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ANNOUNCEMENT 5 -->
-
-                <div
-                    class="announcement-card"
-                    data-course="mathematics"
-                    data-priority="normal"
-                    data-title="Mathematics Assignment Deadline Extended"
-                >
-
-
-                    <div class="announcement-icon">
-
-                        <i class="fa-solid fa-file-pen"></i>
-
-                    </div>
-
-
-                    <div class="announcement-body">
-
-
-                        <div class="announcement-top">
-
-                            <div class="announcement-title-row">
-
-                                <h3>
-                                    Mathematics Assignment Deadline Extended
-                                </h3>
-
-                            </div>
-
-                            <span class="announcement-date">
-                                22 Jul 2026
-                            </span>
-
-                        </div>
-
-
-                        <span class="announcement-course-tag">
-
-                            <i class="fa-solid fa-calculator"></i>
-
-                            Combined Mathematics
-
-                        </span>
-
-
-                        <p class="announcement-text">
-
-                            The deadline for Calculus Assignment 02 has been extended
-                            by three days to give students more time to practice
-                            integration problems.
-
-                        </p>
-
-
-                        <span class="priority-badge priority-normal">
-                            Normal
-                        </span>
-
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ANNOUNCEMENT 6 -->
-
-                <div
-                    class="announcement-card"
-                    data-course="general"
-                    data-priority="urgent"
-                    data-title="Parent-Teacher Meeting Announcement"
-                >
-
-
-                    <div class="announcement-icon urgent-icon">
-
-                        <i class="fa-solid fa-handshake"></i>
-
-                    </div>
-
-
-                    <div class="announcement-body">
-
-
-                        <div class="announcement-top">
-
-                            <div class="announcement-title-row">
-
-                                <h3>
-                                    Parent-Teacher Meeting Announcement
-                                </h3>
-
-                            </div>
-
-                            <span class="announcement-date">
-                                18 Jul 2026
-                            </span>
-
-                        </div>
-
-
-                        <span class="announcement-course-tag">
-
-                            <i class="fa-solid fa-bullhorn"></i>
-
-                            General
-
-                        </span>
-
-
-                        <p class="announcement-text">
-
-                            A parent-teacher meeting has been scheduled for next
-                            month to discuss student progress ahead of the final
-                            examinations. Details will follow shortly.
-
-                        </p>
-
-
-                        <span class="priority-badge priority-urgent">
-                            Urgent
-                        </span>
-
-
-                    </div>
-
-
-                </div>
-
-
-
-                <!-- ANNOUNCEMENT 7 -->
-
-                <div
-                    class="announcement-card"
-                    data-course="english"
-                    data-priority="normal"
-                    data-title="English Essay Competition"
-                >
-
-
-                    <div class="announcement-icon">
-
-                        <i class="fa-solid fa-language"></i>
-
-                    </div>
-
-
-                    <div class="announcement-body">
-
-
-                        <div class="announcement-top">
-
-                            <div class="announcement-title-row">
-
-                                <h3>
-                                    English Essay Competition
-                                </h3>
-
-                            </div>
-
-                            <span class="announcement-date">
-                                15 Jul 2026
-                            </span>
-
-                        </div>
-
-
-                        <span class="announcement-course-tag">
-
-                            <i class="fa-solid fa-language"></i>
-
-                            General English
-
-                        </span>
-
-
-                        <p class="announcement-text">
-
-                            Students are invited to take part in the inter-class
-                            essay writing competition. Entries can be submitted to
-                            the English department by the end of the month.
-
-                        </p>
-
-
-                        <span class="priority-badge priority-normal">
-                            Normal
-                        </span>
-
-
-                    </div>
-
-
-                </div>
+                <?php endforeach; ?>
 
 
             </div>
@@ -1025,6 +789,7 @@
             <div
                 id="noAnnouncements"
                 class="no-announcements"
+                <?php echo $hasRecords ? '' : 'style="display: flex;"'; ?>
             >
 
                 <i class="fa-solid fa-bullhorn"></i>
@@ -1034,7 +799,11 @@
                 </h3>
 
                 <p>
-                    Try changing your search or filter options.
+                    <?php echo $hasRecords
+                        ? 'Try changing your search or filter options.'
+                        : ($linkedStudent
+                            ? 'There are no announcements to show yet.'
+                            : 'No student is linked to this account.'); ?>
                 </p>
 
             </div>
@@ -1081,8 +850,20 @@ document.addEventListener(
             document.querySelectorAll(".announcement-card");
 
 
+        const announcementsList =
+            document.getElementById("announcementsList");
+
+
         const noAnnouncements =
             document.getElementById("noAnnouncements");
+
+
+        const emptyMessage =
+            noAnnouncements.querySelector("p");
+
+
+        const hasServerRecords =
+            announcementCards.length > 0;
 
 
 
@@ -1112,9 +893,11 @@ document.addEventListener(
 
 
                     const title =
-                        card
-                            .getAttribute("data-title")
-                            .toLowerCase();
+                        (
+                            card.getAttribute("data-search") ||
+                            card.getAttribute("data-title") ||
+                            ""
+                        ).toLowerCase();
 
 
                     const course =
@@ -1126,6 +909,7 @@ document.addEventListener(
 
 
                     const matchesSearch =
+                        searchValue === "" ||
                         title.includes(searchValue);
 
 
@@ -1164,13 +948,21 @@ document.addEventListener(
 
 
 
-            if (visibleCount === 0) {
+            if (!hasServerRecords || visibleCount === 0) {
+
+                announcementsList.style.display = "none";
 
                 noAnnouncements.style.display = "flex";
+
+                emptyMessage.textContent = hasServerRecords
+                    ? "Try changing your search or filter options."
+                    : emptyMessage.textContent;
 
             }
 
             else {
+
+                announcementsList.style.display = "";
 
                 noAnnouncements.style.display = "none";
 
@@ -1188,29 +980,6 @@ document.addEventListener(
 
 
         priorityFilter.addEventListener("change", filterAnnouncements);
-
-
-
-        /* -------------------------
-           MARK AS READ ON CLICK
-        ------------------------- */
-
-        announcementCards.forEach(
-            function (card) {
-
-
-                card.addEventListener(
-                    "click",
-                    function () {
-
-                        card.classList.remove("unread");
-
-                    }
-                );
-
-
-            }
-        );
 
 
     }
