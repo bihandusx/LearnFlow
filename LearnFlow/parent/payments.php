@@ -1,3 +1,176 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID, su.Name AS StudentName
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function payments_course_slug($courseName)
+{
+    $slug = strtolower(trim((string) $courseName));
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    return trim($slug, '-') ?: 'course';
+}
+
+function payments_first_name($fullName)
+{
+    $parts = preg_split('/\s+/', trim((string) $fullName));
+    return !empty($parts[0]) ? $parts[0] : 'Student';
+}
+
+function payments_format_lkr($amount)
+{
+    return 'LKR ' . number_format((float) $amount, 0);
+}
+
+function payments_format_date($date, $format = 'd M Y')
+{
+    $ts = $date ? strtotime((string) $date) : false;
+    return $ts ? date($format, $ts) : '';
+}
+
+function payments_display_status($status, $dueDate)
+{
+    if ($status === 'Paid') {
+        return 'Paid';
+    }
+
+    $dueTs = $dueDate ? strtotime((string) $dueDate) : false;
+    $today = strtotime(date('Y-m-d'));
+
+    if ($dueTs && $dueTs < $today) {
+        return 'Overdue';
+    }
+
+    return 'Due';
+}
+
+$parentName = $parent['Name'];
+$parentInitials = parent_initials($parentName);
+
+$paymentRows = [];
+$courseOptions = [];
+$outstanding = 0.0;
+$totalPaid = 0.0;
+$nextDueTs = null;
+$studentFirstName = 'Student';
+
+if ($linkedStudent) {
+    $studentId = (int) $linkedStudent['StudentID'];
+    $studentFirstName = payments_first_name($linkedStudent['StudentName']);
+
+    $paymentStmt = $conn->prepare(
+        "SELECT p.PaymentID, p.Amount, p.PaymentDate, p.PaymentMethod, p.Status,
+                p.ItemTitle, p.DueDate, p.ReceiptNumber, p.CourseID, c.CourseName
+         FROM payment p
+         INNER JOIN course c ON c.CourseID = p.CourseID
+         WHERE p.StudentID = ?
+         ORDER BY COALESCE(p.PaymentDate, p.DueDate) DESC, p.PaymentID DESC"
+    );
+    $paymentStmt->bind_param("i", $studentId);
+    $paymentStmt->execute();
+    $paymentResult = $paymentStmt->get_result();
+
+    while ($row = $paymentResult->fetch_assoc()) {
+        $displayStatus = payments_display_status($row['Status'], $row['DueDate']);
+        $amount = (float) $row['Amount'];
+        $courseId = (int) $row['CourseID'];
+        $courseOptions[$courseId] = $row['CourseName'];
+
+        if ($displayStatus === 'Paid') {
+            $totalPaid += $amount;
+            $dateLabel = 'Paid: ' . payments_format_date($row['PaymentDate']);
+        } else {
+            $outstanding += $amount;
+            $dateLabel = 'Due: ' . payments_format_date($row['DueDate']);
+            $dueTs = $row['DueDate'] ? strtotime((string) $row['DueDate']) : false;
+            if ($dueTs && ($nextDueTs === null || $dueTs < $nextDueTs)) {
+                $nextDueTs = $dueTs;
+            }
+        }
+
+        $paymentRows[] = [
+            'item_title' => $row['ItemTitle'] ?: 'Tuition Fee',
+            'course_name' => $row['CourseName'],
+            'course_slug' => payments_course_slug($row['CourseName']),
+            'amount_label' => payments_format_lkr($amount),
+            'date_label' => $dateLabel,
+            'status' => $displayStatus,
+            'status_slug' => strtolower($displayStatus),
+            'is_paid' => $displayStatus === 'Paid',
+        ];
+    }
+
+    $paymentStmt->close();
+}
+
+$hasRecords = count($paymentRows) > 0;
+$pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Payment Status";
+$nextDueLabel = $nextDueTs ? date('d M', $nextDueTs) : '—';
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +528,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +536,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -398,7 +571,7 @@
                 <div>
 
                     <h1>
-                        Alex's Payment Status
+                        <?php echo $pageTitle; ?>
                     </h1>
 
                     <p>
@@ -414,7 +587,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            LKR 9,500
+                            <?php echo htmlspecialchars(payments_format_lkr($outstanding), ENT_QUOTES, 'UTF-8'); ?>
                         </strong>
 
                         <span>
@@ -427,7 +600,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            LKR 13,500
+                            <?php echo htmlspecialchars(payments_format_lkr($totalPaid), ENT_QUOTES, 'UTF-8'); ?>
                         </strong>
 
                         <span>
@@ -440,7 +613,7 @@
                     <div class="summary-item">
 
                         <strong>
-                            05 Aug
+                            <?php echo htmlspecialchars($nextDueLabel, ENT_QUOTES, 'UTF-8'); ?>
                         </strong>
 
                         <span>
@@ -471,17 +644,11 @@
                         All Courses
                     </option>
 
-                    <option value="mathematics">
-                        Combined Mathematics
-                    </option>
-
-                    <option value="chemistry">
-                        Chemistry
-                    </option>
-
-                    <option value="physics">
-                        Physics
-                    </option>
+                    <?php foreach ($courseOptions as $courseName): ?>
+                        <option value="<?php echo htmlspecialchars(payments_course_slug($courseName), ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($courseName, ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
+                    <?php endforeach; ?>
 
                 </select>
 
@@ -517,7 +684,10 @@
 
             <!-- PAYMENTS TABLE -->
 
-            <div class="payments-table-card">
+            <div
+                class="payments-table-card"
+                <?php echo $hasRecords ? '' : 'style="display: none;"'; ?>
+            >
 
 
                 <table
@@ -549,294 +719,65 @@
 
                     <tbody>
 
+                        <?php foreach ($paymentRows as $row): ?>
+                            <tr
+                                class="payments-row"
+                                data-course="<?php echo htmlspecialchars($row['course_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-status="<?php echo htmlspecialchars($row['status_slug'], ENT_QUOTES, 'UTF-8'); ?>"
+                            >
 
-                        <tr
-                            class="payments-row"
-                            data-course="mathematics"
-                            data-status="due"
-                        >
+                                <td>
 
-                            <td>
+                                    <span class="payments-item">
 
-                                <span class="payments-item">
+                                        <i class="fa-solid fa-file-invoice-dollar"></i>
 
-                                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                                        <?php echo htmlspecialchars($row['item_title'], ENT_QUOTES, 'UTF-8'); ?>
 
-                                    August Tuition Fee
+                                    </span>
 
-                                </span>
+                                </td>
 
-                            </td>
+                                <td><?php echo htmlspecialchars($row['course_name'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td>Combined Mathematics</td>
+                                <td class="payments-amount"><?php echo htmlspecialchars($row['amount_label'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td class="payments-amount">LKR 5,000</td>
+                                <td><?php echo htmlspecialchars($row['date_label'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-                            <td>Due: 05 Aug 2026</td>
+                                <td>
 
-                            <td>
+                                    <span class="status-badge status-<?php echo htmlspecialchars($row['status_slug'], ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($row['status'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </span>
 
-                                <span class="status-badge status-due">
-                                    Due
-                                </span>
+                                </td>
 
-                            </td>
+                                <td>
 
-                            <td>
+                                    <?php if ($row['is_paid']): ?>
+                                        <a
+                                            href="receipts.php"
+                                            class="view-receipt-link"
+                                        >
 
-                                <button
-                                    type="button"
-                                    class="pay-now-btn"
-                                >
+                                            View Receipt
 
-                                    Pay Now
+                                        </a>
+                                    <?php else: ?>
+                                        <button
+                                            type="button"
+                                            class="pay-now-btn"
+                                        >
 
-                                </button>
+                                            Pay Now
 
-                            </td>
+                                        </button>
+                                    <?php endif; ?>
 
-                        </tr>
+                                </td>
 
-
-                        <tr
-                            class="payments-row"
-                            data-course="chemistry"
-                            data-status="due"
-                        >
-
-                            <td>
-
-                                <span class="payments-item">
-
-                                    <i class="fa-solid fa-file-invoice-dollar"></i>
-
-                                    August Tuition Fee
-
-                                </span>
-
-                            </td>
-
-                            <td>Chemistry</td>
-
-                            <td class="payments-amount">LKR 4,500</td>
-
-                            <td>Due: 05 Aug 2026</td>
-
-                            <td>
-
-                                <span class="status-badge status-due">
-                                    Due
-                                </span>
-
-                            </td>
-
-                            <td>
-
-                                <button
-                                    type="button"
-                                    class="pay-now-btn"
-                                >
-
-                                    Pay Now
-
-                                </button>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="payments-row"
-                            data-course="physics"
-                            data-status="overdue"
-                        >
-
-                            <td>
-
-                                <span class="payments-item">
-
-                                    <i class="fa-solid fa-book"></i>
-
-                                    Physics Tute Book
-
-                                </span>
-
-                            </td>
-
-                            <td>Physics</td>
-
-                            <td class="payments-amount">LKR 1,200</td>
-
-                            <td>Due: 20 Jul 2026</td>
-
-                            <td>
-
-                                <span class="status-badge status-overdue">
-                                    Overdue
-                                </span>
-
-                            </td>
-
-                            <td>
-
-                                <button
-                                    type="button"
-                                    class="pay-now-btn"
-                                >
-
-                                    Pay Now
-
-                                </button>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="payments-row"
-                            data-course="mathematics"
-                            data-status="paid"
-                        >
-
-                            <td>
-
-                                <span class="payments-item">
-
-                                    <i class="fa-solid fa-file-invoice-dollar"></i>
-
-                                    July Tuition Fee
-
-                                </span>
-
-                            </td>
-
-                            <td>Combined Mathematics</td>
-
-                            <td class="payments-amount">LKR 5,000</td>
-
-                            <td>Paid: 03 Jul 2026</td>
-
-                            <td>
-
-                                <span class="status-badge status-paid">
-                                    Paid
-                                </span>
-
-                            </td>
-
-                            <td>
-
-                                <a
-                                    href="receipts.php"
-                                    class="view-receipt-link"
-                                >
-
-                                    View Receipt
-
-                                </a>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="payments-row"
-                            data-course="chemistry"
-                            data-status="paid"
-                        >
-
-                            <td>
-
-                                <span class="payments-item">
-
-                                    <i class="fa-solid fa-file-invoice-dollar"></i>
-
-                                    July Tuition Fee
-
-                                </span>
-
-                            </td>
-
-                            <td>Chemistry</td>
-
-                            <td class="payments-amount">LKR 4,500</td>
-
-                            <td>Paid: 03 Jul 2026</td>
-
-                            <td>
-
-                                <span class="status-badge status-paid">
-                                    Paid
-                                </span>
-
-                            </td>
-
-                            <td>
-
-                                <a
-                                    href="receipts.php"
-                                    class="view-receipt-link"
-                                >
-
-                                    View Receipt
-
-                                </a>
-
-                            </td>
-
-                        </tr>
-
-
-                        <tr
-                            class="payments-row"
-                            data-course="physics"
-                            data-status="paid"
-                        >
-
-                            <td>
-
-                                <span class="payments-item">
-
-                                    <i class="fa-solid fa-file-invoice-dollar"></i>
-
-                                    June Tuition Fee
-
-                                </span>
-
-                            </td>
-
-                            <td>Physics</td>
-
-                            <td class="payments-amount">LKR 4,000</td>
-
-                            <td>Paid: 02 Jun 2026</td>
-
-                            <td>
-
-                                <span class="status-badge status-paid">
-                                    Paid
-                                </span>
-
-                            </td>
-
-                            <td>
-
-                                <a
-                                    href="receipts.php"
-                                    class="view-receipt-link"
-                                >
-
-                                    View Receipt
-
-                                </a>
-
-                            </td>
-
-                        </tr>
-
+                            </tr>
+                        <?php endforeach; ?>
 
                     </tbody>
 
@@ -853,6 +794,7 @@
             <div
                 id="noPayments"
                 class="no-results"
+                <?php echo $hasRecords ? '' : 'style="display: flex;"'; ?>
             >
 
                 <i class="fa-solid fa-credit-card"></i>
@@ -862,7 +804,9 @@
                 </h3>
 
                 <p>
-                    Try changing your filter options.
+                    <?php echo $hasRecords
+                        ? 'Try changing your filter options.'
+                        : 'There are no payment records to show yet.'; ?>
                 </p>
 
             </div>
@@ -886,7 +830,6 @@
 <!-- Payments JavaScript -->
 
 <script>
-
 
 document.addEventListener(
     "DOMContentLoaded",
@@ -913,8 +856,16 @@ document.addEventListener(
             document.getElementById("noPayments");
 
 
+        const emptyMessage =
+            noPayments.querySelector("p");
+
+
         const payNowButtons =
             document.querySelectorAll(".pay-now-btn");
+
+
+        const hasServerRecords =
+            <?php echo $hasRecords ? 'true' : 'false'; ?>;
 
 
 
@@ -976,11 +927,15 @@ document.addEventListener(
 
 
 
-            if (visibleCount === 0) {
+            if (!hasServerRecords || visibleCount === 0) {
 
                 paymentsTableCard.style.display = "none";
 
                 noPayments.style.display = "flex";
+
+                emptyMessage.textContent = hasServerRecords
+                    ? "Try changing your filter options."
+                    : "There are no payment records to show yet.";
 
             }
 

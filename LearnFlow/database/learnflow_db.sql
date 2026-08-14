@@ -372,7 +372,11 @@ CREATE TABLE `payment` (
   `PaymentDate` date DEFAULT NULL,
   `PaymentMethod` varchar(50) DEFAULT NULL,
   `Status` varchar(30) DEFAULT NULL,
-  `StudentID` int(11) DEFAULT NULL
+  `StudentID` int(11) DEFAULT NULL,
+  `CourseID` int(11) DEFAULT NULL,
+  `ItemTitle` varchar(150) DEFAULT NULL,
+  `DueDate` date DEFAULT NULL,
+  `ReceiptNumber` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -651,7 +655,9 @@ ALTER TABLE `parent_student`
 --
 ALTER TABLE `payment`
   ADD PRIMARY KEY (`PaymentID`),
-  ADD KEY `StudentID` (`StudentID`);
+  ADD UNIQUE KEY `ReceiptNumber` (`ReceiptNumber`),
+  ADD KEY `StudentID` (`StudentID`),
+  ADD KEY `CourseID` (`CourseID`);
 
 --
 -- Indexes for table `quiz`
@@ -986,7 +992,8 @@ ALTER TABLE `parent_student`
 -- Constraints for table `payment`
 --
 ALTER TABLE `payment`
-  ADD CONSTRAINT `payment_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `student` (`StudentID`);
+  ADD CONSTRAINT `payment_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `student` (`StudentID`),
+  ADD CONSTRAINT `payment_ibfk_2` FOREIGN KEY (`CourseID`) REFERENCES `course` (`CourseID`);
 
 --
 -- Constraints for table `quiz`
