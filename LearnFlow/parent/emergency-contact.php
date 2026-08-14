@@ -1,3 +1,248 @@
+<?php
+
+session_start();
+
+include "../config/db.php";
+
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role'])
+    || $_SESSION['role'] !== 'Parent'
+) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$parentId = (int) $_SESSION['user_id'];
+$successMessage = '';
+$errorMessage = '';
+
+$ensureParent = $conn->prepare("INSERT IGNORE INTO parent (ParentID) VALUES (?)");
+$ensureParent->bind_param("i", $parentId);
+$ensureParent->execute();
+$ensureParent->close();
+
+$allowedRelationships = array('Father', 'Mother', 'Guardian');
+$allowedBloodGroups = array('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-');
+
+$parentStmt = $conn->prepare(
+    "SELECT u.UserID, u.Name, u.Phone
+     FROM users u
+     INNER JOIN parent p ON p.ParentID = u.UserID
+     WHERE u.UserID = ? AND u.Role = 'Parent'
+     LIMIT 1"
+);
+$parentStmt->bind_param("i", $parentId);
+$parentStmt->execute();
+$parentResult = $parentStmt->get_result();
+$parent = $parentResult ? $parentResult->fetch_assoc() : null;
+$parentStmt->close();
+
+if (!$parent) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$studentStmt = $conn->prepare(
+    "SELECT s.StudentID,
+            s.RegistrationNo,
+            su.Name AS StudentName,
+            ps.RelationshipType
+     FROM parent_student ps
+     INNER JOIN student s ON s.StudentID = ps.StudentID
+     INNER JOIN users su ON su.UserID = s.StudentID
+     WHERE ps.ParentID = ?
+     LIMIT 1"
+);
+$studentStmt->bind_param("i", $parentId);
+$studentStmt->execute();
+$studentResult = $studentStmt->get_result();
+$linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
+$studentStmt->close();
+
+function parent_initials($name)
+{
+    $parts = preg_split('/\s+/', trim((string) $name));
+    $initials = '';
+
+    if (!empty($parts[0])) {
+        $initials .= strtoupper(substr($parts[0], 0, 1));
+    }
+
+    if (count($parts) > 1 && !empty($parts[count($parts) - 1])) {
+        $initials .= strtoupper(substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return $initials !== '' ? $initials : 'P';
+}
+
+function emergency_option_selected($current, $option)
+{
+    return (string) $current === (string) $option ? 'selected' : '';
+}
+
+$parentName = $parent['Name'] ?? '';
+$parentPhone = trim((string) ($parent['Phone'] ?? ''));
+$parentRelationship = trim((string) ($linkedStudent['RelationshipType'] ?? ''));
+$parentInitials = parent_initials($parentName);
+$studentName = $linkedStudent['StudentName'] ?? '';
+$studentRegNo = $linkedStudent['RegistrationNo'] ?? '';
+$studentId = $linkedStudent ? (int) $linkedStudent['StudentID'] : 0;
+$hasEmergencyRow = false;
+
+$form = array(
+    'primaryName' => '',
+    'primaryRelationship' => '',
+    'primaryPhone' => '',
+    'primaryAltPhone' => '',
+    'secondaryName' => '',
+    'secondaryRelationship' => '',
+    'secondaryPhone' => '',
+    'bloodGroup' => '',
+    'familyDoctor' => '',
+    'allergies' => '',
+    'medicalConditions' => '',
+);
+
+if (isset($_POST['save_emergency']) && $linkedStudent) {
+    $form['primaryName'] = trim($_POST['primaryName'] ?? '');
+    $form['primaryRelationship'] = trim($_POST['primaryRelationship'] ?? '');
+    $form['primaryPhone'] = trim($_POST['primaryPhone'] ?? '');
+    $form['primaryAltPhone'] = trim($_POST['primaryAltPhone'] ?? '');
+    $form['secondaryName'] = trim($_POST['secondaryName'] ?? '');
+    $form['secondaryRelationship'] = trim($_POST['secondaryRelationship'] ?? '');
+    $form['secondaryPhone'] = trim($_POST['secondaryPhone'] ?? '');
+    $form['bloodGroup'] = trim($_POST['bloodGroup'] ?? '');
+    $form['familyDoctor'] = trim($_POST['familyDoctor'] ?? '');
+    $form['allergies'] = trim($_POST['allergies'] ?? '');
+    $form['medicalConditions'] = trim($_POST['medicalConditions'] ?? '');
+
+    if ($form['primaryName'] === '' || $form['primaryPhone'] === '') {
+        $errorMessage = "Primary contact name and phone number are required.";
+    } elseif (
+        $form['primaryRelationship'] === ''
+        || !in_array($form['primaryRelationship'], $allowedRelationships, true)
+    ) {
+        $errorMessage = "Please select a valid primary relationship.";
+    } elseif (
+        $form['secondaryRelationship'] !== ''
+        && !in_array($form['secondaryRelationship'], $allowedRelationships, true)
+    ) {
+        $errorMessage = "Invalid secondary relationship selected.";
+    } elseif (
+        $form['bloodGroup'] !== ''
+        && !in_array($form['bloodGroup'], $allowedBloodGroups, true)
+    ) {
+        $errorMessage = "Invalid blood group selected.";
+    } else {
+        $saveStmt = $conn->prepare(
+            "INSERT INTO student_emergency
+                (StudentID, PrimaryName, PrimaryRelationship, PrimaryPhone, PrimaryAltPhone,
+                 SecondaryName, SecondaryRelationship, SecondaryPhone,
+                 BloodGroup, FamilyDoctorContact, Allergies, MedicalConditions, UpdatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE
+                PrimaryName = VALUES(PrimaryName),
+                PrimaryRelationship = VALUES(PrimaryRelationship),
+                PrimaryPhone = VALUES(PrimaryPhone),
+                PrimaryAltPhone = VALUES(PrimaryAltPhone),
+                SecondaryName = VALUES(SecondaryName),
+                SecondaryRelationship = VALUES(SecondaryRelationship),
+                SecondaryPhone = VALUES(SecondaryPhone),
+                BloodGroup = VALUES(BloodGroup),
+                FamilyDoctorContact = VALUES(FamilyDoctorContact),
+                Allergies = VALUES(Allergies),
+                MedicalConditions = VALUES(MedicalConditions),
+                UpdatedAt = NOW()"
+        );
+        $saveStmt->bind_param(
+            "isssssssssss",
+            $studentId,
+            $form['primaryName'],
+            $form['primaryRelationship'],
+            $form['primaryPhone'],
+            $form['primaryAltPhone'],
+            $form['secondaryName'],
+            $form['secondaryRelationship'],
+            $form['secondaryPhone'],
+            $form['bloodGroup'],
+            $form['familyDoctor'],
+            $form['allergies'],
+            $form['medicalConditions']
+        );
+
+        if (!$saveStmt->execute()) {
+            $errorMessage = "Could not save emergency contact details. Please try again.";
+            $saveStmt->close();
+        } else {
+            $saveStmt->close();
+            $_SESSION['emergency_success'] = "Emergency contact information saved successfully.";
+            header("Location: emergency-contact.php");
+            exit();
+        }
+    }
+}
+
+if (isset($_SESSION['emergency_success'])) {
+    $successMessage = $_SESSION['emergency_success'];
+    unset($_SESSION['emergency_success']);
+}
+
+$emergency = null;
+
+if ($linkedStudent) {
+    $emergencyStmt = $conn->prepare(
+        "SELECT PrimaryName, PrimaryRelationship, PrimaryPhone, PrimaryAltPhone,
+                SecondaryName, SecondaryRelationship, SecondaryPhone,
+                BloodGroup, FamilyDoctorContact, Allergies, MedicalConditions
+         FROM student_emergency
+         WHERE StudentID = ?
+         LIMIT 1"
+    );
+    $emergencyStmt->bind_param("i", $studentId);
+    $emergencyStmt->execute();
+    $emergencyResult = $emergencyStmt->get_result();
+    $emergency = $emergencyResult ? $emergencyResult->fetch_assoc() : null;
+    $emergencyStmt->close();
+    $hasEmergencyRow = (bool) $emergency;
+}
+
+if ($errorMessage === '') {
+    $storedPrimaryName = trim((string) ($emergency['PrimaryName'] ?? ''));
+    $storedPrimaryPhone = trim((string) ($emergency['PrimaryPhone'] ?? ''));
+    $useParentFallback = !$emergency
+        || ($storedPrimaryName === '' && $storedPrimaryPhone === '');
+
+    if ($useParentFallback) {
+        $form['primaryName'] = $parentName;
+        $form['primaryRelationship'] = $parentRelationship;
+        $form['primaryPhone'] = $parentPhone;
+    } else {
+        $form['primaryName'] = $storedPrimaryName;
+        $form['primaryRelationship'] = trim((string) ($emergency['PrimaryRelationship'] ?? ''));
+        $form['primaryPhone'] = $storedPrimaryPhone;
+    }
+
+    $form['primaryAltPhone'] = trim((string) ($emergency['PrimaryAltPhone'] ?? ''));
+    $form['secondaryName'] = trim((string) ($emergency['SecondaryName'] ?? ''));
+    $form['secondaryRelationship'] = trim((string) ($emergency['SecondaryRelationship'] ?? ''));
+    $form['secondaryPhone'] = trim((string) ($emergency['SecondaryPhone'] ?? ''));
+    $form['bloodGroup'] = trim((string) ($emergency['BloodGroup'] ?? ''));
+    $form['familyDoctor'] = trim((string) ($emergency['FamilyDoctorContact'] ?? ''));
+    $form['allergies'] = (string) ($emergency['Allergies'] ?? '');
+    $form['medicalConditions'] = (string) ($emergency['MedicalConditions'] ?? '');
+}
+
+$studentLine = 'No linked student found for this parent account.';
+if ($linkedStudent) {
+    $studentLine = 'For: ' . $studentName;
+    if ($studentRegNo !== '') {
+        $studentLine .= ' • Student ID: ' . $studentRegNo;
+    }
+}
+
+$statusLabel = $hasEmergencyRow ? 'Information Up to Date' : 'Not set yet';
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -355,7 +600,7 @@
 
                     <div class="user-avatar">
 
-                        NF
+                        <?php echo htmlspecialchars($parentInitials, ENT_QUOTES, 'UTF-8'); ?>
 
                     </div>
 
@@ -363,7 +608,7 @@
                     <div class="user-info">
 
                         <span class="user-name">
-                            Nimal Fernando
+                            <?php echo htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8'); ?>
                         </span>
 
                         <span class="user-role">
@@ -390,6 +635,20 @@
         <section class="dashboard-content">
 
 
+            <?php if ($successMessage !== ''): ?>
+                <div class="profile-alert profile-alert-success">
+                    <?php echo htmlspecialchars($successMessage, ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
+
+
+            <?php if ($errorMessage !== ''): ?>
+                <div class="profile-alert profile-alert-error">
+                    <?php echo htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
+
+
             <!-- PAGE HEADER -->
 
             <div class="profile-header-card">
@@ -414,17 +673,19 @@
 
 
                         <p>
-                            For: Alex Silva • Student ID: LF2026001
+                            <?php echo htmlspecialchars($studentLine, ENT_QUOTES, 'UTF-8'); ?>
                         </p>
 
 
+                        <?php if ($linkedStudent): ?>
                         <span class="profile-status">
 
                             <i class="fa-solid fa-circle"></i>
 
-                            Information Up to Date
+                            <?php echo htmlspecialchars($statusLabel, ENT_QUOTES, 'UTF-8'); ?>
 
                         </span>
+                        <?php endif; ?>
 
 
                     </div>
@@ -433,6 +694,7 @@
                 </div>
 
 
+                <?php if ($linkedStudent): ?>
                 <button
                     type="button"
                     class="profile-edit-btn"
@@ -444,13 +706,26 @@
                     Edit Information
 
                 </button>
+                <?php endif; ?>
 
 
             </div>
 
 
+            <?php if (!$linkedStudent): ?>
 
-            <form id="emergencyForm">
+                <p>
+                    No linked student found for this parent account.
+                </p>
+
+            <?php else: ?>
+
+
+            <form
+                id="emergencyForm"
+                method="POST"
+                action="emergency-contact.php"
+            >
 
 
                 <!-- PRIMARY EMERGENCY CONTACT -->
@@ -497,7 +772,9 @@
                             <input
                                 type="text"
                                 id="primaryName"
-                                value="Nimal Fernando"
+                                name="primaryName"
+                                value="<?php echo htmlspecialchars($form['primaryName'], ENT_QUOTES, 'UTF-8'); ?>"
+                                required
                                 disabled
                             >
 
@@ -518,20 +795,23 @@
 
                             <select
                                 id="primaryRelationship"
+                                name="primaryRelationship"
+                                required
                                 disabled
                             >
 
-                                <option selected>
-                                    Father
+                                <option value="" <?php echo emergency_option_selected($form['primaryRelationship'], ''); ?>>
+                                    Select relationship
                                 </option>
 
-                                <option>
-                                    Mother
-                                </option>
-
-                                <option>
-                                    Guardian
-                                </option>
+                                <?php foreach ($allowedRelationships as $option): ?>
+                                    <option
+                                        value="<?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>"
+                                        <?php echo emergency_option_selected($form['primaryRelationship'], $option); ?>
+                                    >
+                                        <?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
 
                             </select>
 
@@ -553,7 +833,9 @@
                             <input
                                 type="tel"
                                 id="primaryPhone"
-                                value="+94 77 987 6543"
+                                name="primaryPhone"
+                                value="<?php echo htmlspecialchars($form['primaryPhone'], ENT_QUOTES, 'UTF-8'); ?>"
+                                required
                                 disabled
                             >
 
@@ -575,7 +857,8 @@
                             <input
                                 type="tel"
                                 id="primaryAltPhone"
-                                value="+94 11 234 5678"
+                                name="primaryAltPhone"
+                                value="<?php echo htmlspecialchars($form['primaryAltPhone'], ENT_QUOTES, 'UTF-8'); ?>"
                                 disabled
                             >
 
@@ -634,7 +917,8 @@
                             <input
                                 type="text"
                                 id="secondaryName"
-                                value="Kumari Fernando"
+                                name="secondaryName"
+                                value="<?php echo htmlspecialchars($form['secondaryName'], ENT_QUOTES, 'UTF-8'); ?>"
                                 disabled
                             >
 
@@ -655,20 +939,22 @@
 
                             <select
                                 id="secondaryRelationship"
+                                name="secondaryRelationship"
                                 disabled
                             >
 
-                                <option>
-                                    Father
+                                <option value="" <?php echo emergency_option_selected($form['secondaryRelationship'], ''); ?>>
+                                    Select relationship
                                 </option>
 
-                                <option selected>
-                                    Mother
-                                </option>
-
-                                <option>
-                                    Guardian
-                                </option>
+                                <?php foreach ($allowedRelationships as $option): ?>
+                                    <option
+                                        value="<?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>"
+                                        <?php echo emergency_option_selected($form['secondaryRelationship'], $option); ?>
+                                    >
+                                        <?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
 
                             </select>
 
@@ -690,7 +976,8 @@
                             <input
                                 type="tel"
                                 id="secondaryPhone"
-                                value="+94 71 456 7890"
+                                name="secondaryPhone"
+                                value="<?php echo htmlspecialchars($form['secondaryPhone'], ENT_QUOTES, 'UTF-8'); ?>"
                                 disabled
                             >
 
@@ -748,17 +1035,22 @@
 
                             <select
                                 id="bloodGroup"
+                                name="bloodGroup"
                                 disabled
                             >
 
-                                <option>A+</option>
-                                <option>A-</option>
-                                <option>B+</option>
-                                <option selected>B-</option>
-                                <option>AB+</option>
-                                <option>AB-</option>
-                                <option>O+</option>
-                                <option>O-</option>
+                                <option value="" <?php echo emergency_option_selected($form['bloodGroup'], ''); ?>>
+                                    Select blood group
+                                </option>
+
+                                <?php foreach ($allowedBloodGroups as $option): ?>
+                                    <option
+                                        value="<?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>"
+                                        <?php echo emergency_option_selected($form['bloodGroup'], $option); ?>
+                                    >
+                                        <?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
 
                             </select>
 
@@ -780,7 +1072,8 @@
                             <input
                                 type="tel"
                                 id="familyDoctor"
-                                value="+94 11 289 3344"
+                                name="familyDoctor"
+                                value="<?php echo htmlspecialchars($form['familyDoctor'], ENT_QUOTES, 'UTF-8'); ?>"
                                 disabled
                             >
 
@@ -801,9 +1094,10 @@
 
                             <textarea
                                 id="allergies"
+                                name="allergies"
                                 rows="2"
                                 disabled
-                            >Mild allergy to peanuts.</textarea>
+                            ><?php echo htmlspecialchars($form['allergies'], ENT_QUOTES, 'UTF-8'); ?></textarea>
 
 
                         </div>
@@ -822,9 +1116,10 @@
 
                             <textarea
                                 id="medicalConditions"
+                                name="medicalConditions"
                                 rows="3"
                                 disabled
-                            >No ongoing medical conditions. Carries an inhaler for occasional mild asthma.</textarea>
+                            ><?php echo htmlspecialchars($form['medicalConditions'], ENT_QUOTES, 'UTF-8'); ?></textarea>
 
 
                         </div>
@@ -858,6 +1153,8 @@
 
                     <button
                         type="submit"
+                        name="save_emergency"
+                        value="1"
                         class="profile-save-btn"
                     >
 
@@ -872,6 +1169,9 @@
 
 
             </form>
+
+
+            <?php endif; ?>
 
 
         </section>
@@ -889,6 +1189,7 @@
 <script src="../js/parent.js"></script>
 
 
+<?php if ($linkedStudent): ?>
 <!-- Emergency Contact JavaScript -->
 
 <script>
@@ -913,6 +1214,11 @@ document.addEventListener(
 
         const emergencyForm =
             document.getElementById("emergencyForm");
+
+
+        if (!editButton || !cancelButton || !formActions || !emergencyForm) {
+            return;
+        }
 
 
         const editableFields =
@@ -958,21 +1264,7 @@ document.addEventListener(
             "click",
             function () {
 
-
-                editableFields.forEach(
-                    function (field) {
-
-                        field.disabled = true;
-
-                    }
-                );
-
-
-                formActions.classList.remove("show");
-
-
-                editButton.style.display = "inline-flex";
-
+                window.location.href = "emergency-contact.php";
 
             }
         );
@@ -985,31 +1277,15 @@ document.addEventListener(
 
         emergencyForm.addEventListener(
             "submit",
-            function (event) {
-
-
-                event.preventDefault();
-
+            function () {
 
                 editableFields.forEach(
                     function (field) {
 
-                        field.disabled = true;
+                        field.disabled = false;
 
                     }
                 );
-
-
-                formActions.classList.remove("show");
-
-
-                editButton.style.display = "inline-flex";
-
-
-                alert(
-                    "Emergency contact information saved successfully! (Frontend demo)"
-                );
-
 
             }
         );
@@ -1020,6 +1296,7 @@ document.addEventListener(
 
 
 </script>
+<?php endif; ?>
 
 
 </body>

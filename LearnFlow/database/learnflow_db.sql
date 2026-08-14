@@ -424,6 +424,28 @@ CREATE TABLE `student` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `student_emergency`
+--
+
+CREATE TABLE `student_emergency` (
+  `StudentID` int(11) NOT NULL,
+  `PrimaryName` varchar(100) DEFAULT NULL,
+  `PrimaryRelationship` varchar(50) DEFAULT NULL,
+  `PrimaryPhone` varchar(20) DEFAULT NULL,
+  `PrimaryAltPhone` varchar(20) DEFAULT NULL,
+  `SecondaryName` varchar(100) DEFAULT NULL,
+  `SecondaryRelationship` varchar(50) DEFAULT NULL,
+  `SecondaryPhone` varchar(20) DEFAULT NULL,
+  `BloodGroup` varchar(10) DEFAULT NULL,
+  `FamilyDoctorContact` varchar(20) DEFAULT NULL,
+  `Allergies` text DEFAULT NULL,
+  `MedicalConditions` text DEFAULT NULL,
+  `UpdatedAt` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `teacher`
 --
 
@@ -680,6 +702,12 @@ ALTER TABLE `student`
   ADD PRIMARY KEY (`StudentID`),
   ADD UNIQUE KEY `RegistrationNo` (`RegistrationNo`),
   ADD UNIQUE KEY `NIC` (`NIC`);
+
+--
+-- Indexes for table `student_emergency`
+--
+ALTER TABLE `student_emergency`
+  ADD PRIMARY KEY (`StudentID`);
 
 --
 -- Indexes for table `teacher`
@@ -1013,6 +1041,12 @@ ALTER TABLE `quiz_attempt`
 --
 ALTER TABLE `student`
   ADD CONSTRAINT `student_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `users` (`UserID`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `student_emergency`
+--
+ALTER TABLE `student_emergency`
+  ADD CONSTRAINT `student_emergency_ibfk_1` FOREIGN KEY (`StudentID`) REFERENCES `student` (`StudentID`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `teacher`
