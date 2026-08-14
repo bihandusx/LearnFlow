@@ -299,6 +299,26 @@ CREATE TABLE `learning_resource` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `meeting_request`
+--
+
+CREATE TABLE `meeting_request` (
+  `MeetingRequestID` int(11) NOT NULL,
+  `ParentID` int(11) DEFAULT NULL,
+  `StudentID` int(11) DEFAULT NULL,
+  `RecipientID` int(11) DEFAULT NULL,
+  `Subject` varchar(150) DEFAULT NULL,
+  `Reason` text DEFAULT NULL,
+  `PreferredDate` date DEFAULT NULL,
+  `PreferredTime` time DEFAULT NULL,
+  `Mode` enum('Online','In-Person') DEFAULT NULL,
+  `Status` enum('Pending','Confirmed','Declined') DEFAULT 'Pending',
+  `RequestedAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `module`
 --
 
@@ -598,6 +618,15 @@ ALTER TABLE `learning_resource`
   ADD KEY `CoordinatorID` (`CoordinatorID`);
 
 --
+-- Indexes for table `meeting_request`
+--
+ALTER TABLE `meeting_request`
+  ADD PRIMARY KEY (`MeetingRequestID`),
+  ADD KEY `ParentID` (`ParentID`),
+  ADD KEY `StudentID` (`StudentID`),
+  ADD KEY `RecipientID` (`RecipientID`);
+
+--
 -- Indexes for table `module`
 --
 ALTER TABLE `module`
@@ -764,6 +793,12 @@ ALTER TABLE `learning_resource`
   MODIFY `ResourceID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `meeting_request`
+--
+ALTER TABLE `meeting_request`
+  MODIFY `MeetingRequestID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `module`
 --
 ALTER TABLE `module`
@@ -919,6 +954,14 @@ ALTER TABLE `learning_resource`
   ADD CONSTRAINT `learning_resource_ibfk_1` FOREIGN KEY (`ModuleID`) REFERENCES `module` (`ModuleID`),
   ADD CONSTRAINT `learning_resource_ibfk_2` FOREIGN KEY (`TeacherID`) REFERENCES `teacher` (`TeacherID`),
   ADD CONSTRAINT `learning_resource_ibfk_3` FOREIGN KEY (`CoordinatorID`) REFERENCES `academic_coordinator` (`CoordinatorID`);
+
+--
+-- Constraints for table `meeting_request`
+--
+ALTER TABLE `meeting_request`
+  ADD CONSTRAINT `meeting_request_ibfk_1` FOREIGN KEY (`ParentID`) REFERENCES `parent` (`ParentID`),
+  ADD CONSTRAINT `meeting_request_ibfk_2` FOREIGN KEY (`StudentID`) REFERENCES `student` (`StudentID`),
+  ADD CONSTRAINT `meeting_request_ibfk_3` FOREIGN KEY (`RecipientID`) REFERENCES `users` (`UserID`);
 
 --
 -- Constraints for table `module`
