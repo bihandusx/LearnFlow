@@ -157,7 +157,7 @@ if ($linkedStudent) {
         $courseName = $isGeneral ? 'General' : $row['CourseName'];
         $courseSlug = $isGeneral ? 'general' : announcements_course_slug($courseName);
         $priorityLabel = trim((string) ($row['Priority'] ?? ''));
-        if ($priorityLabel === '') {
+        if ($priorityLabel === '' || $priorityLabel === '0') {
             $priorityLabel = 'Normal';
         }
         $prioritySlug = strtolower($priorityLabel);
