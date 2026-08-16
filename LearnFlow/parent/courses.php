@@ -117,20 +117,18 @@ function courses_banner_class($courseName)
 }
 
 /**
- * Static Course Progress placeholders (no institute-wide formula yet).
+ * Batch module completion % for an enrolled course.
+ * completed/total modules for BatchID; null when the batch has no modules.
  * See scripts/academic_progress_calculation.md
  */
-function courses_static_progress_pct($courseId)
+function courses_module_pct($moduleTotal, $moduleCompleted)
 {
-    $placeholders = [
-        1 => 70,
-        2 => 80,
-        3 => 72,
-        4 => 65,
-        5 => 100,
-    ];
+    $total = (int) $moduleTotal;
+    if ($total <= 0) {
+        return null;
+    }
 
-    return $placeholders[(int) $courseId] ?? 75;
+    return (int) round(((int) $moduleCompleted / $total) * 100);
 }
 
 $parentName = $parent['Name'];
@@ -141,8 +139,7 @@ $courseCards = [];
 $enrolledCount = 0;
 $avgAttendanceDisplay = '—';
 $assignmentCompletionDisplay = '—';
-// Static Average Progress placeholder (deferred formula)
-$averageProgressDisplay = '79%';
+$averageProgressDisplay = '—';
 
 if ($linkedStudent) {
     $studentId = (int) $linkedStudent['StudentID'];
@@ -153,6 +150,8 @@ if ($linkedStudent) {
                 c.CourseID, c.CourseName, c.Stream,
                 tu.Name AS TeacherName,
                 (SELECT COUNT(*) FROM module m WHERE m.BatchID = e.BatchID) AS ModuleCount,
+                (SELECT COUNT(*) FROM module m
+                  WHERE m.BatchID = e.BatchID AND m.IsCompleted = 1) AS ModuleCompleted,
                 (SELECT COUNT(*) FROM attendance a
                   WHERE a.StudentID = ? AND a.CourseID = c.CourseID) AS AttTotal,
                 (SELECT COUNT(*) FROM attendance a
@@ -184,6 +183,7 @@ if ($linkedStudent) {
     $attTotalSum = 0;
     $assignSubmittedSum = 0;
     $assignTotalSum = 0;
+    $progressPcts = [];
 
     while ($row = $enrollResult->fetch_assoc()) {
         $courseId = (int) $row['CourseID'];
@@ -205,7 +205,10 @@ if ($linkedStudent) {
         $isCompleted = strcasecmp($statusRaw, 'Completed') === 0;
         $stream = trim((string) ($row['Stream'] ?? ''));
         $teacherName = trim((string) ($row['TeacherName'] ?? ''));
-        $progressPct = courses_static_progress_pct($courseId);
+        $progressPct = courses_module_pct($row['ModuleCount'], $row['ModuleCompleted']);
+        if ($progressPct !== null) {
+            $progressPcts[] = $progressPct;
+        }
 
         $courseCards[] = [
             'course_id' => $courseId,
@@ -229,6 +232,10 @@ if ($linkedStudent) {
     $enrollStmt->close();
 
     $enrolledCount = count($courseCards);
+
+    if (count($progressPcts) > 0) {
+        $averageProgressDisplay = (int) round(array_sum($progressPcts) / count($progressPcts)) . '%';
+    }
 
     if ($attTotalSum > 0) {
         $avgAttendanceDisplay = (int) round(($attPresentSum / $attTotalSum) * 100) . '%';
@@ -860,6 +867,7 @@ if ($linkedStudent) {
 
                                 <div class="course-progress">
 
+                                    <?php if ($card['progress_pct'] !== null): ?>
 
                                     <div class="course-progress-label">
 
@@ -882,6 +890,8 @@ if ($linkedStudent) {
                                         ></div>
 
                                     </div>
+
+                                    <?php endif; ?>
 
 
                                 </div>

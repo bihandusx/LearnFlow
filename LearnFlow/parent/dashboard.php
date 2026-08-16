@@ -97,21 +97,19 @@ function dashboard_course_icon($courseName)
 }
 
 /**
- * Static Course Progress placeholders (no institute-wide formula yet).
- * Same map as courses.php / progress.php.
+ * Batch module completion % for an enrolled course.
+ * completed/total modules for BatchID; null when the batch has no modules.
+ * Same formula as courses.php / progress.php.
  * See scripts/academic_progress_calculation.md
  */
-function dashboard_static_progress_pct($courseId)
+function dashboard_module_pct($moduleTotal, $moduleCompleted)
 {
-    $placeholders = [
-        1 => 70,
-        2 => 80,
-        3 => 72,
-        4 => 65,
-        5 => 100,
-    ];
+    $total = (int) $moduleTotal;
+    if ($total <= 0) {
+        return null;
+    }
 
-    return $placeholders[(int) $courseId] ?? 75;
+    return (int) round(((int) $moduleCompleted / $total) * 100);
 }
 
 /**
@@ -346,7 +344,10 @@ if ($linkedStudent) {
 
     // --- Course participation preview ---
     $enrollStmt = $conn->prepare(
-        "SELECT c.CourseID, c.CourseName, c.Stream
+        "SELECT c.CourseID, c.CourseName, c.Stream,
+                (SELECT COUNT(*) FROM module m WHERE m.BatchID = e.BatchID) AS ModuleCount,
+                (SELECT COUNT(*) FROM module m
+                  WHERE m.BatchID = e.BatchID AND m.IsCompleted = 1) AS ModuleCompleted
          FROM enrollment e
          INNER JOIN batch b ON b.BatchID = e.BatchID
          INNER JOIN course c ON c.CourseID = b.CourseID
@@ -359,12 +360,11 @@ if ($linkedStudent) {
     $enrollResult = $enrollStmt->get_result();
 
     while ($row = $enrollResult->fetch_assoc()) {
-        $courseId = (int) $row['CourseID'];
         $stream = trim((string) ($row['Stream'] ?? ''));
         if ($stream === '') {
             $stream = 'General';
         }
-        $progressPct = dashboard_static_progress_pct($courseId);
+        $progressPct = dashboard_module_pct($row['ModuleCount'], $row['ModuleCompleted']);
 
         $coursePreview[] = [
             'course_name' => $row['CourseName'],
@@ -1093,6 +1093,7 @@ $studentFirstNameSafe = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8')
 
                                     <div class="progress-container">
 
+                                        <?php if ($course['progress_pct'] !== null): ?>
 
                                         <div class="progress-label">
 
@@ -1115,6 +1116,8 @@ $studentFirstNameSafe = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8')
                                             ></div>
 
                                         </div>
+
+                                        <?php endif; ?>
 
 
                                     </div>

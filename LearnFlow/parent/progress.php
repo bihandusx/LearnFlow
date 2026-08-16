@@ -158,20 +158,18 @@ function progress_trend_from_scores(array $scores)
 }
 
 /**
- * Static Course Progress placeholders (no institute-wide formula yet).
+ * Batch module completion % for an enrolled course.
+ * completed/total modules for BatchID; null when the batch has no modules.
  * See scripts/academic_progress_calculation.md
  */
-function progress_static_progress_pct($courseId)
+function progress_module_pct($moduleTotal, $moduleCompleted)
 {
-    $placeholders = [
-        1 => 70,
-        2 => 80,
-        3 => 72,
-        4 => 65,
-        5 => 100,
-    ];
+    $total = (int) $moduleTotal;
+    if ($total <= 0) {
+        return null;
+    }
 
-    return $placeholders[(int) $courseId] ?? 75;
+    return (int) round(((int) $moduleCompleted / $total) * 100);
 }
 
 $parentName = $parent['Name'];
@@ -186,13 +184,17 @@ $needsAttentionCount = 0;
 $averageGrade = '—';
 $hasExamData = false;
 $overviewCourses = [];
+$overallProgressDisplay = '—';
 
 if ($linkedStudent) {
     $studentId = (int) $linkedStudent['StudentID'];
     $studentFirstName = progress_first_name($linkedStudent['StudentName']);
 
     $overviewStmt = $conn->prepare(
-        "SELECT c.CourseID, c.CourseName, c.Stream, tu.Name AS TeacherName
+        "SELECT c.CourseID, c.CourseName, c.Stream, tu.Name AS TeacherName,
+                (SELECT COUNT(*) FROM module m WHERE m.BatchID = e.BatchID) AS ModuleCount,
+                (SELECT COUNT(*) FROM module m
+                  WHERE m.BatchID = e.BatchID AND m.IsCompleted = 1) AS ModuleCompleted
          FROM enrollment e
          INNER JOIN batch b ON b.BatchID = e.BatchID
          INNER JOIN course c ON c.CourseID = b.CourseID
@@ -203,20 +205,30 @@ if ($linkedStudent) {
     $overviewStmt->bind_param("i", $studentId);
     $overviewStmt->execute();
     $overviewResult = $overviewStmt->get_result();
+    $progressPcts = [];
     while ($row = $overviewResult->fetch_assoc()) {
         $courseId = (int) $row['CourseID'];
         $teacherName = trim((string) ($row['TeacherName'] ?? ''));
         $stream = trim((string) ($row['Stream'] ?? ''));
+        $progressPct = progress_module_pct($row['ModuleCount'], $row['ModuleCompleted']);
+        if ($progressPct !== null) {
+            $progressPcts[] = $progressPct;
+        }
         $overviewCourses[] = [
             'course_id' => $courseId,
             'course_name' => $row['CourseName'],
             'teacher_name' => $teacherName !== '' ? $teacherName : '—',
             'stream' => $stream !== '' ? $stream : 'General',
             'icon' => progress_course_icon($row['CourseName']),
-            'progress_pct' => progress_static_progress_pct($courseId),
+            'progress_pct' => $progressPct,
+            'module_count' => (int) $row['ModuleCount'],
         ];
     }
     $overviewStmt->close();
+
+    if (count($progressPcts) > 0) {
+        $overallProgressDisplay = (int) round(array_sum($progressPcts) / count($progressPcts)) . '%';
+    }
 
     $examStmt = $conn->prepare(
         "SELECT c.CourseID, c.CourseName, t.Title, t.TotalMarks,
@@ -740,7 +752,7 @@ $pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Acad
                     <div class="summary-item">
 
                         <strong>
-                            79%
+                            <?php echo htmlspecialchars($overallProgressDisplay, ENT_QUOTES, 'UTF-8'); ?>
                         </strong>
 
                         <span>
@@ -798,7 +810,7 @@ $pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Acad
 
             <!-- =================================================
                  COURSE PROGRESS OVERVIEW
-                 (names + teachers live; progress % static — formula deferred)
+                 (batch module completion: completed / total modules)
             ================================================== -->
 
             <div class="progress-section">
@@ -876,6 +888,7 @@ $pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Acad
 
                                 <div class="progress-container">
 
+                                    <?php if ($ov['progress_pct'] !== null): ?>
 
                                     <div class="progress-label">
 
@@ -898,6 +911,8 @@ $pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Acad
                                         ></div>
 
                                     </div>
+
+                                    <?php endif; ?>
 
 
                                 </div>
@@ -1051,8 +1066,8 @@ $pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Acad
 
 
             <!-- =================================================
-                 TEACHER REMARKS 
-            ================================================== -->
+                 TEACHER REMARKS (commented out — no remarks table yet)
+            ==================================================
 
             <div class="progress-section">
 
@@ -1174,6 +1189,8 @@ $pageTitle = htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') . "'s Acad
 
 
             </div>
+
+            ================================================== -->
 
 
         </section>

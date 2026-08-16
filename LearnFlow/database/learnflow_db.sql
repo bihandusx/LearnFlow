@@ -328,7 +328,9 @@ CREATE TABLE `module` (
   `ModuleName` varchar(100) DEFAULT NULL,
   `ModuleOrder` int(11) DEFAULT NULL,
   `Description` text DEFAULT NULL,
-  `BatchID` int(11) DEFAULT NULL
+  `BatchID` int(11) DEFAULT NULL,
+  `IsCompleted` tinyint(1) NOT NULL DEFAULT 0,
+  `CompletedDate` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
