@@ -9,80 +9,108 @@ $error = "";
 $success = "";
 
 
-if(isset($_POST['register']))
-{
+if (isset($_POST['register'])) {
 
-    $fullname = $_POST['fullname'];
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
-    $role = $_POST['role'];
+    $fullname = trim($_POST['fullname'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    $role = $_POST['role'] ?? '';
 
+    $allowedRoles = ['Student', 'Teacher', 'Parent', 'Admin'];
 
-
-    // Check passwords match
-
-    if($password != $confirm_password)
-    {
+    if ($password !== $confirm_password) {
         $error = "Passwords do not match";
-    }
+    } elseif (!in_array($role, $allowedRoles, true)) {
+        $error = "Invalid role selected";
+    } elseif ($fullname === '' || $email === '') {
+        $error = "Name and email are required";
+    } else {
+        $check = $conn->prepare("SELECT UserID FROM users WHERE Email = ? LIMIT 1");
+        $check->bind_param("s", $email);
+        $check->execute();
+        $check->store_result();
 
-    else
-    {
-
-        // Check existing email
-
-        $check = "SELECT * FROM users WHERE Email='$email'";
-
-        $result = mysqli_query($conn,$check);
-
-
-
-        if(mysqli_num_rows($result)>0)
-        {
+        if ($check->num_rows > 0) {
             $error = "Email already registered";
-        }
-
-        else
-        {
-
-            // Encrypt password
+            $check->close();
+        } else {
+            $check->close();
 
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $conn->begin_transaction();
 
+            try {
+                $userStmt = $conn->prepare(
+                    "INSERT INTO users (Name, Email, Password, Role) VALUES (?, ?, ?, ?)"
+                );
+                $userStmt->bind_param("ssss", $fullname, $email, $hashed_password, $role);
 
+                if (!$userStmt->execute()) {
+                    throw new Exception("Failed to create user");
+                }
 
-            $query = "INSERT INTO users
-            (Name, Email, Password, Role)
+                $userId = (int) $conn->insert_id;
+                $userStmt->close();
 
-            VALUES
+                if ($role === 'Student') {
+                    $nextNum = 1;
+                    $regResult = $conn->query(
+                        "SELECT RegistrationNo FROM student
+                         WHERE RegistrationNo LIKE 'STU%'
+                         ORDER BY RegistrationNo DESC
+                         LIMIT 1
+                         FOR UPDATE"
+                    );
 
-            (
-            '$fullname',
-            '$email',
-            '$hashed_password',
-            '$role'
-            )";
+                    if ($regResult && $row = $regResult->fetch_assoc()) {
+                        if (preg_match('/(\d+)$/', $row['RegistrationNo'], $matches)) {
+                            $nextNum = (int) $matches[1] + 1;
+                        }
+                    }
 
+                    $registrationNo = 'STU' . str_pad((string) $nextNum, 4, '0', STR_PAD_LEFT);
+                    $studentStmt = $conn->prepare(
+                        "INSERT INTO student (StudentID, RegistrationNo, EnrollmentDate)
+                         VALUES (?, ?, CURDATE())"
+                    );
+                    $studentStmt->bind_param("is", $userId, $registrationNo);
 
+                    if (!$studentStmt->execute()) {
+                        throw new Exception("Failed to create student profile");
+                    }
+                    $studentStmt->close();
+                } elseif ($role === 'Parent') {
+                    $roleStmt = $conn->prepare("INSERT INTO parent (ParentID) VALUES (?)");
+                    $roleStmt->bind_param("i", $userId);
+                    if (!$roleStmt->execute()) {
+                        throw new Exception("Failed to create parent profile");
+                    }
+                    $roleStmt->close();
+                } elseif ($role === 'Teacher') {
+                    $roleStmt = $conn->prepare("INSERT INTO teacher (TeacherID) VALUES (?)");
+                    $roleStmt->bind_param("i", $userId);
+                    if (!$roleStmt->execute()) {
+                        throw new Exception("Failed to create teacher profile");
+                    }
+                    $roleStmt->close();
+                } elseif ($role === 'Admin') {
+                    $roleStmt = $conn->prepare("INSERT INTO admin (AdminID) VALUES (?)");
+                    $roleStmt->bind_param("i", $userId);
+                    if (!$roleStmt->execute()) {
+                        throw new Exception("Failed to create admin profile");
+                    }
+                    $roleStmt->close();
+                }
 
-            if(mysqli_query($conn,$query))
-            {
+                $conn->commit();
                 $success = "Registration successful! Please login.";
-
-            }
-
-            else
-            {
+            } catch (Exception $e) {
+                $conn->rollback();
                 $error = "Registration failed";
             }
-
-
         }
-
     }
-
-
 }
 
 

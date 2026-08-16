@@ -23,6 +23,73 @@ $ensureParent->close();
 
 $allowedRelationships = array('Father', 'Mother', 'Guardian');
 
+if (isset($_POST['link_student'])) {
+    $registrationNo = strtoupper(trim($_POST['registration_no'] ?? ''));
+
+    $existingLinkStmt = $conn->prepare(
+        "SELECT StudentID FROM parent_student WHERE ParentID = ? LIMIT 1"
+    );
+    $existingLinkStmt->bind_param("i", $parentId);
+    $existingLinkStmt->execute();
+    $existingLinkResult = $existingLinkStmt->get_result();
+    $existingLink = $existingLinkResult ? $existingLinkResult->fetch_assoc() : null;
+    $existingLinkStmt->close();
+
+    if ($existingLink) {
+        $errorMessage = "A student is already linked to your account.";
+    } elseif ($registrationNo === '') {
+        $errorMessage = "Please enter a student ID.";
+    } else {
+        $studentLookup = $conn->prepare(
+            "SELECT s.StudentID
+             FROM student s
+             INNER JOIN users u ON u.UserID = s.StudentID
+             WHERE s.RegistrationNo = ? AND u.Role = 'Student'
+             LIMIT 1"
+        );
+        $studentLookup->bind_param("s", $registrationNo);
+        $studentLookup->execute();
+        $studentLookupResult = $studentLookup->get_result();
+        $studentRow = $studentLookupResult ? $studentLookupResult->fetch_assoc() : null;
+        $studentLookup->close();
+
+        if (!$studentRow) {
+            $errorMessage = "No student found with that ID.";
+        } else {
+            $studentIdToLink = (int) $studentRow['StudentID'];
+
+            $alreadyLinkedStmt = $conn->prepare(
+                "SELECT ParentID FROM parent_student WHERE StudentID = ? LIMIT 1"
+            );
+            $alreadyLinkedStmt->bind_param("i", $studentIdToLink);
+            $alreadyLinkedStmt->execute();
+            $alreadyLinkedResult = $alreadyLinkedStmt->get_result();
+            $alreadyLinked = $alreadyLinkedResult ? $alreadyLinkedResult->fetch_assoc() : null;
+            $alreadyLinkedStmt->close();
+
+            if ($alreadyLinked) {
+                $errorMessage = "This student is already linked to a parent.";
+            } else {
+                $insertLink = $conn->prepare(
+                    "INSERT INTO parent_student (ParentID, StudentID, RelationshipType)
+                     VALUES (?, ?, NULL)"
+                );
+                $insertLink->bind_param("ii", $parentId, $studentIdToLink);
+
+                if ($insertLink->execute()) {
+                    $insertLink->close();
+                    $_SESSION['profile_success'] = "Student linked successfully.";
+                    header("Location: profile.php");
+                    exit();
+                }
+
+                $insertLink->close();
+                $errorMessage = "Could not link student. Please try again.";
+            }
+        }
+    }
+}
+
 if (isset($_POST['save_profile'])) {
     $fullName = trim($_POST['fullName'] ?? '');
     $email = trim($_POST['email'] ?? '');
@@ -135,7 +202,8 @@ if (!$parent) {
 }
 
 $studentStmt = $conn->prepare(
-    "SELECT ps.RelationshipType,
+    "SELECT ps.StudentID,
+            ps.RelationshipType,
             s.RegistrationNo,
             su.Name AS StudentName
      FROM parent_student ps
@@ -149,6 +217,32 @@ $studentStmt->execute();
 $studentResult = $studentStmt->get_result();
 $linkedStudent = $studentResult ? $studentResult->fetch_assoc() : null;
 $studentStmt->close();
+
+$program = '';
+$stream = '';
+
+if ($linkedStudent) {
+    $linkedStudentId = (int) $linkedStudent['StudentID'];
+    $courseStmt = $conn->prepare(
+        "SELECT c.CourseName, c.Stream
+         FROM enrollment e
+         INNER JOIN batch b ON b.BatchID = e.BatchID
+         INNER JOIN course c ON c.CourseID = b.CourseID
+         WHERE e.StudentID = ?
+         ORDER BY e.EnrollmentID
+         LIMIT 1"
+    );
+    $courseStmt->bind_param("i", $linkedStudentId);
+    $courseStmt->execute();
+    $courseResult = $courseStmt->get_result();
+    $courseRow = $courseResult ? $courseResult->fetch_assoc() : null;
+    $courseStmt->close();
+
+    if ($courseRow) {
+        $program = (string) ($courseRow['CourseName'] ?? '');
+        $stream = (string) ($courseRow['Stream'] ?? '');
+    }
+}
 
 function parent_initials($name)
 {
@@ -173,11 +267,9 @@ $parentAddress = $parent['Address'] ?? '';
 $parentNic = $parent['NIC'] ?? '';
 $parentStatus = trim((string) ($parent['Status'] ?? ''));
 $statusLabel = $parentStatus !== '' ? $parentStatus : 'Active';
-$relationship = $linkedStudent['RelationshipType'] ?? '';
-$studentName = $linkedStudent['StudentName'] ?? '';
-$studentRegNo = $linkedStudent['RegistrationNo'] ?? '';
-$program = '';
-$stream = '';
+$relationship = ($linkedStudent ?? [])['RelationshipType'] ?? '';
+$studentName = ($linkedStudent ?? [])['StudentName'] ?? '';
+$studentRegNo = ($linkedStudent ?? [])['RegistrationNo'] ?? '';
 $initials = parent_initials($parentName);
 
 if ($errorMessage !== '' && isset($_POST['save_profile'])) {
@@ -915,7 +1007,7 @@ if ($errorMessage !== '' && isset($_POST['save_profile'])) {
 
 
 
-            <!-- LINKED STUDENT INFORMATION -->
+            <!-- LINKED STUDENT / LINK YOUR STUDENT -->
 
             <div class="profile-card">
 
@@ -926,94 +1018,156 @@ if ($errorMessage !== '' && isset($_POST['save_profile'])) {
                     <div>
 
 
-                        <h3>
-                            Linked Student Information
-                        </h3>
+                        <?php if ($linkedStudent): ?>
+
+                            <h3>
+                                Linked Student Information
+                            </h3>
 
 
-                        <p>
-                            Details of the student linked to your parent account.
-                        </p>
+                            <p>
+                                Details of the student linked to your parent account.
+                            </p>
+
+                        <?php else: ?>
+
+                            <h3>
+                                Link your student
+                            </h3>
 
 
-                    </div>
+                            <p>
+                                Enter the student ID (for example STU1234) to link your child.
+                            </p>
 
-
-                </div>
-
-
-
-                <div class="academic-info-grid">
-
-
-                    <div class="academic-info-item">
-
-
-                        <span class="academic-label">
-                            Student Name
-                        </span>
-
-
-                        <strong>
-                            <?php echo htmlspecialchars($studentName); ?>
-                        </strong>
-
-
-                    </div>
-
-
-
-                    <div class="academic-info-item">
-
-
-                        <span class="academic-label">
-                            Student ID
-                        </span>
-
-
-                        <strong>
-                            <?php echo htmlspecialchars($studentRegNo); ?>
-                        </strong>
-
-
-                    </div>
-
-
-
-                    <div class="academic-info-item">
-
-
-                        <span class="academic-label">
-                            Program
-                        </span>
-
-
-                        <strong>
-                            <?php echo htmlspecialchars($program); ?>
-                        </strong>
-
-
-                    </div>
-
-
-
-                    <div class="academic-info-item">
-
-
-                        <span class="academic-label">
-                            Stream
-                        </span>
-
-
-                        <strong>
-                            <?php echo htmlspecialchars($stream); ?>
-                        </strong>
+                        <?php endif; ?>
 
 
                     </div>
 
 
                 </div>
+
+
+                <?php if ($linkedStudent): ?>
+
+                    <div class="academic-info-grid">
+
+
+                        <div class="academic-info-item">
+
+
+                            <span class="academic-label">
+                                Student Name
+                            </span>
+
+
+                            <strong>
+                                <?php echo htmlspecialchars($studentName); ?>
+                            </strong>
+
+
+                        </div>
+
+
+
+                        <div class="academic-info-item">
+
+
+                            <span class="academic-label">
+                                Student ID
+                            </span>
+
+
+                            <strong>
+                                <?php echo htmlspecialchars($studentRegNo); ?>
+                            </strong>
+
+
+                        </div>
+
+
+
+                        <div class="academic-info-item">
+
+
+                            <span class="academic-label">
+                                Program
+                            </span>
+
+
+                            <strong>
+                                <?php echo htmlspecialchars($program); ?>
+                            </strong>
+
+
+                        </div>
+
+
+
+                        <div class="academic-info-item">
+
+
+                            <span class="academic-label">
+                                Stream
+                            </span>
+
+
+                            <strong>
+                                <?php echo htmlspecialchars($stream); ?>
+                            </strong>
+
+
+                        </div>
+
+
+                    </div>
+
+                <?php else: ?>
+
+                    <form method="POST" action="">
+
+                        <div class="profile-form-grid">
+
+                            <div class="profile-form-group">
+
+                                <label for="registration_no">
+                                    Student ID
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="registration_no"
+                                    name="registration_no"
+                                    placeholder="STU1234"
+                                    value="<?php echo isset($_POST['link_student']) ? htmlspecialchars(strtoupper(trim($_POST['registration_no'] ?? ''))) : ''; ?>"
+                                    required
+                                >
+
+                            </div>
+
+                        </div>
+
+                        <div class="profile-form-actions" style="display: flex;">
+
+                            <button
+                                type="submit"
+                                name="link_student"
+                                value="1"
+                                class="profile-save-btn"
+                            >
+
+                                <i class="fa-solid fa-link"></i>
+
+                                Link Student
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                <?php endif; ?>
 
 
             </div>
