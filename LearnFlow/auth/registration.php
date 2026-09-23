@@ -4,87 +4,52 @@ session_start();
 
 include "../config/db.php";
 
-
 $error = "";
 $success = "";
 
-
-if(isset($_POST['register']))
+if (isset($_POST['register']))
 {
-
     $fullname = $_POST['fullname'];
     $email = $_POST['email'];
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
     $role = $_POST['role'];
 
-
-
-    // Check passwords match
-
-    if($password != $confirm_password)
+    // Check passwords
+    if ($password != $confirm_password)
     {
         $error = "Passwords do not match";
     }
-
     else
     {
-
         // Check existing email
+        $check = "SELECT * FROM users WHERE Email='$email'";
+        $result = mysqli_query($conn, $check);
 
-        $check = "SELECT * FROM users WHERE email='$email'";
-
-        $result = mysqli_query($conn,$check);
-
-
-
-        if(mysqli_num_rows($result)>0)
+        if (mysqli_num_rows($result) > 0)
         {
             $error = "Email already registered";
         }
-
         else
         {
-
             // Encrypt password
-
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
+            // Insert user
+            $query = "INSERT INTO users (Name, Email, Password, Role)
+                      VALUES ('$fullname', '$email', '$hashed_password', '$role')";
 
-
-            $query = "INSERT INTO users
-            (fullname,email,password,role)
-
-            VALUES
-
-            (
-            '$fullname',
-            '$email',
-            '$hashed_password',
-            '$role'
-            )";
-
-
-
-            if(mysqli_query($conn,$query))
+            if (mysqli_query($conn, $query))
             {
                 $success = "Registration successful! Please login.";
-
             }
-
             else
             {
-                $error = "Registration failed";
+                $error = "Registration failed: " . mysqli_error($conn);
             }
-
-
         }
-
     }
-
-
 }
-
 
 ?>
 

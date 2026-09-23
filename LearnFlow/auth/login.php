@@ -22,8 +22,8 @@ if(isset($_POST['login']))
 
 
     $query = "SELECT * FROM users 
-              WHERE email='$email' 
-              AND role='$role'";
+              WHERE Email='$email' 
+              AND Role='$role'";
 
 
     $result = mysqli_query($conn,$query);
@@ -38,16 +38,37 @@ if(isset($_POST['login']))
 
         // Password verification
 
-        if(password_verify($password,$user['password']))
+        if(password_verify($password,$user['Password']))
         {
 
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['name'] = $user['fullname'];
-            $_SESSION['role'] = $user['role'];
+            $_SESSION['user_id'] = $user['UserID'];
+            $_SESSION['name'] = $user['Name'];
+            $_SESSION['role'] = $user['Role'];
 
 
-            header("Location: dashboard.php");
-            exit();
+            if ($user['Role'] == 'Student') {
+
+    header("Location: ../student/dashboard.php");
+
+} elseif ($user['Role'] == 'Teacher') {
+
+    header("Location: ../teacher/dashboard.php");
+
+} elseif ($user['Role'] == 'Parent') {
+
+    header("Location: ../parent/dashboard.php");
+
+} elseif ($user['Role'] == 'Admin') {
+
+    header("Location: ../admin/dashboard.php");
+
+} elseif ($user['Role'] == 'Academic Coordinator') {
+
+    header("Location: ../academic_coordinator/dashboard.php");
+
+}
+
+exit();
 
         }
         else
@@ -260,6 +281,16 @@ TEACHER
 
 ADMIN
 
+</label>
+
+<label class="role-btn">
+    <input type="radio" name="role" value="Parent">
+    PARENT
+</label>
+
+<label class="role-btn">
+    <input type="radio" name="role" value="Academic Coordinator">
+     COORDINATOR
 </label>
 
 
