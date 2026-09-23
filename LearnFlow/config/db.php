@@ -1,17 +1,42 @@
 <?php
-$host = "localhost";
+
+$host = "127.0.0.1";
 $username = "root";
-$password = "";
+
+/*
+|--------------------------------------------------------------------------
+| IMPORTANT
+|--------------------------------------------------------------------------
+| Put the SAME password here that you entered when this worked:
+|
+| mysql.exe -u root -p
+|
+*/
+$password = "1995";
+
 $database = "learnflow_db";
+$port = 3306;
 
-// Create connection
-$conn = new mysqli($host, $username, $password, $database);
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+
+    $conn = new mysqli(
+        $host,
+        $username,
+        $password,
+        $database,
+        $port
+    );
+
+    $conn->set_charset("utf8mb4");
+
+} catch (mysqli_sql_exception $e) {
+
+    die(
+        "Database connection failed: " .
+        $e->getMessage()
+    );
 }
 
-// Set character encoding
-$conn->set_charset("utf8mb4");
 ?>
