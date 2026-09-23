@@ -1,98 +1,290 @@
 <?php
 
-/*session_start();
-include "../config/db.php";
-
-error_reporting(E_ALL);
-ini_set('display_errors',1);*/
-
 session_start();
 
-include "../config/db.php";
+require_once "../config/db.php";
 
-// Login Process
-
-if(isset($_POST['login']))
-{
-
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    $role = $_POST['role'];
+$error = "";
 
 
+/*
+|--------------------------------------------------------------------------
+| AUTOMATIC PROJECT BASE URL
+|--------------------------------------------------------------------------
+|
+| Example:
+|
+| /LearnFlow/auth/login.php
+|
+| becomes:
+|
+| /LearnFlow
+|
+| This also works if the project folder is renamed or nested.
+|
+*/
 
-    $query = "SELECT * FROM users 
-              WHERE email='$email' 
-              AND role='$role'";
-
-
-    $result = mysqli_query($conn,$query);
-
-
-
-    if(mysqli_num_rows($result) == 1)
-    {
-
-        $user = mysqli_fetch_assoc($result);
-
-
-        // Password verification
-
-        if(password_verify($password,$user['password']))
-        {
-
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['name'] = $user['fullname'];
-            $_SESSION['role'] = $user['role'];
+$baseUrl = rtrim(
+    dirname(dirname($_SERVER['SCRIPT_NAME'])),
+    '/\\'
+);
 
 
-            header("Location: dashboard.php");
-            exit();
+/*
+|--------------------------------------------------------------------------
+| PROCESS LOGIN
+|--------------------------------------------------------------------------
+*/
 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["login"])) {
+
+    $email = trim($_POST["email"] ?? "");
+    $password = $_POST["password"] ?? "";
+    $role = $_POST["role"] ?? "";
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | VALID ROLES
+    |--------------------------------------------------------------------------
+    */
+
+    $allowedRoles = [
+        "Student",
+        "Teacher",
+        "Parent",
+        "Admin",
+        "AcademicCoordinator"
+    ];
+
+
+    if ($email === "") {
+
+        $error = "Email address is required.";
+
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+        $error = "Please enter a valid email address.";
+
+    } elseif ($password === "") {
+
+        $error = "Password is required.";
+
+    } elseif (!in_array($role, $allowedRoles, true)) {
+
+        $error = "Please select a valid role.";
+
+    } else {
+
+        try {
+
+            /*
+            |--------------------------------------------------------------------------
+            | FIND USER
+            |--------------------------------------------------------------------------
+            */
+
+            $stmt = $conn->prepare("
+                SELECT
+                    user_id,
+                    fullname,
+                    email,
+                    password,
+                    status,
+                    role
+                FROM user_accounts
+                WHERE email = ?
+                  AND role = ?
+                LIMIT 1
+            ");
+
+            $stmt->bind_param(
+                "ss",
+                $email,
+                $role
+            );
+
+            $stmt->execute();
+
+            $result = $stmt->get_result();
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | USER FOUND
+            |--------------------------------------------------------------------------
+            */
+
+            if ($result->num_rows === 1) {
+
+                $user = $result->fetch_assoc();
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | ACCOUNT STATUS CHECK
+                |--------------------------------------------------------------------------
+                */
+
+                if ($user["status"] !== "active") {
+
+                    if ($user["status"] === "pending") {
+
+                        $error =
+                            "Your account is pending approval.";
+
+                    } elseif ($user["status"] === "suspended") {
+
+                        $error =
+                            "Your account has been suspended.";
+
+                    } else {
+
+                        $error =
+                            "Your account is not active.";
+                    }
+
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | PASSWORD CHECK
+                |--------------------------------------------------------------------------
+                */
+
+                elseif (
+                    password_verify(
+                        $password,
+                        $user["password"]
+                    )
+                ) {
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | LOGIN SUCCESSFUL
+                    |--------------------------------------------------------------------------
+                    */
+
+                    session_regenerate_id(true);
+
+                    $_SESSION["user_id"] =
+                        (int) $user["user_id"];
+
+                    $_SESSION["name"] =
+                        $user["fullname"];
+
+                    $_SESSION["email"] =
+                        $user["email"];
+
+                    $_SESSION["role"] =
+                        $user["role"];
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | ROLE DASHBOARDS
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $destinations = [
+
+                        "Student" =>
+                            $baseUrl .
+                            "/student/dashboard.php",
+
+                        "Teacher" =>
+                            $baseUrl .
+                            "/teacher/dashboard.php",
+
+                        "Parent" =>
+                            $baseUrl .
+                            "/parent/dashboard.php",
+
+                        "Admin" =>
+                            $baseUrl .
+                            "/admin/dashboard.php",
+
+                        "AcademicCoordinator" =>
+                            $baseUrl .
+                            "/coordinator/dashboard.php"
+                    ];
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | REDIRECT
+                    |--------------------------------------------------------------------------
+                    */
+
+                    header(
+                        "Location: " .
+                        $destinations[$user["role"]]
+                    );
+
+                    exit();
+
+                } else {
+
+                    $error =
+                        "Incorrect email, password, or role.";
+                }
+
+            } else {
+
+                $error =
+                    "Incorrect email, password, or role.";
+            }
+
+
+            $stmt->close();
+
+        } catch (mysqli_sql_exception $e) {
+
+            $error =
+                "Login failed because of a database error.";
         }
-        else
-        {
-            $error = "Incorrect password!";
-        }
-
-
     }
-    else
-    {
-        $error = "Invalid email or role selected!";
-    }
-
-
 }
-
 
 ?>
 
 
-
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
 
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<title>Login | LearnFlow</title>
+    <title>
+        Login | LearnFlow
+    </title>
 
 
-<link rel="stylesheet" href="../css/login.css">
+    <link
+        rel="stylesheet"
+        href="../css/login.css"
+    >
 
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    >
 
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
 
 </head>
-
 
 
 <body>
@@ -101,316 +293,347 @@ if(isset($_POST['login']))
 <div class="login-container">
 
 
-<!-- LEFT SIDE -->
+    <!-- =====================================================
+         LEFT SIDE
+         ===================================================== -->
 
+    <div class="hero-section">
 
-<div class="hero-section">
 
+        <div class="brand">
 
-<div class="brand">
+            <i class="fa-solid fa-graduation-cap"></i>
 
-<i class="fa-solid fa-graduation-cap"></i>
+            <span>
+                LEARNFLOW LMS
+            </span>
 
-<span>LEARNFLOW LMS</span>
+        </div>
 
-</div>
 
+        <div class="hero-content">
 
 
-<div class="hero-content">
+            <h1 class="hero-title">
 
+                Unlock Your Academic Potential.
 
-<h1 class="hero-title">
+            </h1>
 
-Unlock Your Academic Potential.
 
-</h1>
+            <p class="hero-description">
 
+                Access your personalized learning path,
+                study materials and academic resources.
 
-<p class="hero-description">
+            </p>
 
-Access your personalized learning path, premium study materials, and recorded sessions from the island's best tutors.
 
-</p>
+            <ul class="features-list">
 
 
+                <li class="feature-item">
 
-<ul class="features-list">
+                    <div class="feature-icon">
 
+                        <i class="fa-solid fa-shield"></i>
 
-<li class="feature-item">
+                    </div>
 
-<div class="feature-icon">
+                    <span>
+                        Secure Institutional Access
+                    </span>
 
-<i class="fa-solid fa-shield"></i>
+                </li>
 
-</div>
 
-<span>Secure Institutional Access</span>
+                <li class="feature-item">
 
-</li>
+                    <div class="feature-icon">
 
+                        <i class="fa-solid fa-book-open"></i>
 
+                    </div>
 
-<li class="feature-item">
+                    <span>
+                        Learning Resources
+                    </span>
 
-<div class="feature-icon">
+                </li>
 
-<i class="fa-solid fa-users"></i>
 
-</div>
+                <li class="feature-item">
 
-<span>15,000+ Active A/L Students</span>
+                    <div class="feature-icon">
 
-</li>
+                        <i class="fa-solid fa-circle-check"></i>
 
+                    </div>
 
+                    <span>
+                        Complete LMS Experience
+                    </span>
 
-<li class="feature-item">
+                </li>
 
-<div class="feature-icon">
 
-<i class="fa-solid fa-circle-check"></i>
+            </ul>
 
-</div>
 
-<span>Curated 2024/25 Syllabus Content</span>
+        </div>
 
-</li>
 
+    </div>
 
-</ul>
 
 
-</div>
+    <!-- =====================================================
+         LOGIN FORM
+         ===================================================== -->
 
+    <div class="form-section">
 
 
+        <div class="form-wrapper">
 
-<div class="hero-footer">
 
-© 2026 Advanced Level Tuition LMS. Empowering future leaders through technology.
+            <div class="form-header">
 
-</div>
+                <h2>
+                    Welcome Back
+                </h2>
 
+                <p>
+                    Please enter your credentials
+                    to access your dashboard.
+                </p>
 
+            </div>
 
-</div>
 
 
+            <?php if ($error !== ""): ?>
 
 
+                <p
+                    style="
+                        color:#b91c1c;
+                        text-align:center;
+                        margin-bottom:15px;
+                    "
+                >
 
-<!-- RIGHT SIDE LOGIN -->
+                    <i class="fa-solid fa-circle-exclamation"></i>
 
+                    <?php
+                    echo htmlspecialchars($error);
+                    ?>
 
-<div class="form-section">
+                </p>
 
 
-<div class="form-wrapper">
+            <?php endif; ?>
 
 
 
-<div class="form-header">
+            <form
+                method="POST"
+                action="login.php"
+            >
 
 
-<h2>Welcome Back</h2>
+                <!-- ROLE -->
 
+                <div class="role-selector">
 
-<p>
-Please enter your credentials to access your dashboard.
-</p>
 
+                    <label class="role-btn">
 
-</div>
+                        <input
+                            type="radio"
+                            name="role"
+                            value="Student"
+                            checked
+                        >
 
-<form method="POST" action="">
+                        STUDENT
 
+                    </label>
 
 
-<!-- ROLE -->
+                    <label class="role-btn">
 
+                        <input
+                            type="radio"
+                            name="role"
+                            value="Teacher"
+                        >
 
-<div class="role-selector">
+                        TEACHER
 
+                    </label>
 
-<label class="role-btn active">
 
-<input type="radio" name="role" value="Student" checked>
+                    <label class="role-btn">
 
-STUDENT
+                        <input
+                            type="radio"
+                            name="role"
+                            value="Parent"
+                        >
 
-</label>
+                        PARENT
 
+                    </label>
 
 
-<label class="role-btn">
+                    <label class="role-btn">
 
-<input type="radio" name="role" value="Teacher">
+                        <input
+                            type="radio"
+                            name="role"
+                            value="Admin"
+                        >
 
-TEACHER
+                        ADMIN
 
-</label>
+                    </label>
 
 
+                    <label class="role-btn">
 
-<label class="role-btn">
+                        <input
+                            type="radio"
+                            name="role"
+                            value="AcademicCoordinator"
+                        >
 
-<input type="radio" name="role" value="Admin">
+                        COORDINATOR
 
-ADMIN
+                    </label>
 
-</label>
 
+                </div>
 
-</div>
 
 
+                <!-- EMAIL -->
 
+                <div class="form-group">
 
 
-<!-- EMAIL -->
+                    <label for="email">
 
+                        Email Address
 
-<div class="form-group">
+                    </label>
 
 
-<label>Email</label>
+                    <div class="input-wrapper">
 
 
-<div class="input-wrapper">
+                        <i class="fa-solid fa-envelope input-icon"></i>
 
 
-<i class="fa-solid fa-envelope input-icon"></i>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            class="form-input"
+                            placeholder="Enter your email"
+                            required
+                        >
 
 
-<input 
-type="email"
-name="email"
-class="form-input"
-placeholder="student@altuition.lk"
-required>
+                    </div>
 
 
-</div>
+                </div>
 
 
-</div>
 
+                <!-- PASSWORD -->
 
+                <div class="form-group">
 
 
+                    <label for="password">
 
-<!-- PASSWORD -->
+                        Password
 
+                    </label>
 
-<div class="form-group">
 
+                    <div class="input-wrapper">
 
-<label>Password</label>
 
+                        <i class="fa-solid fa-lock input-icon"></i>
 
-<div class="input-wrapper">
 
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="form-input"
+                            placeholder="Enter your password"
+                            required
+                        >
 
-<i class="fa-solid fa-lock input-icon"></i>
 
+                    </div>
 
-<input
-type="password"
-name="password"
-class="form-input"
-placeholder="********"
-required>
 
+                </div>
 
-</div>
 
 
-</div>
+                <!-- LOGIN BUTTON -->
 
+                <button
+                    class="btn-submit"
+                    type="submit"
+                    name="login"
+                >
 
+                    Login
 
+                    <i class="fa-solid fa-arrow-right"></i>
 
+                </button>
 
-<div class="checkbox-group">
 
+            </form>
 
-<input type="checkbox">
 
 
-<label>
-Keep me logged in on this device
-</label>
+            <div class="divider">
 
+                <span>
+                    DON'T HAVE AN ACCOUNT?
+                </span>
 
-</div>
+            </div>
 
 
+            <a
+                href="registration.php"
+                class="btn-secondary"
+            >
 
+                Create Account
 
+            </a>
 
-<button 
-type="submit"
-name="login"
-class="btn-submit">
 
+        </div>
 
-Sign In to Dashboard
 
-<i class="fa-solid fa-arrow-right"></i>
-
-
-</button>
-
-
-
-</form>
-
-
-
-
-
-
-<div class="divider">
-
-<span>NEW TO THE PLATFORM?</span>
-
-</div>
-
-
-
-
-<a href="registration.php" class="btn-secondary">
-
-Create Student Account
-
-</a>
-
-
-
-
-
-<div class="terms-note">
-
-By logging in, you agree to our Terms of Service and Privacy Policy.
-
-</div>
-
-
-
-
-</div>
-
-
-</div>
-
+    </div>
 
 
 </div>
 
 
 </body>
-
 
 </html>
