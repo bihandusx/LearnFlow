@@ -1,0 +1,344 @@
+/* =========================================================
+   ACADEMIC COORDINATOR PROFILE
+========================================================= */
+
+.profile-page-card {
+    background: #ffffff;
+    border: 1px solid #e3eaf3;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+}
+
+
+/* ================= PROFILE HEADER ================= */
+
+.profile-cover {
+    height: 110px;
+
+    background: linear-gradient(
+        135deg,
+        #eaf2ff 0%,
+        #f2edff 50%,
+        #e8f7f5 100%
+    );
+
+    border-bottom: 1px solid #e2e8f0;
+}
+
+
+.profile-header-content {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 25px;
+
+    padding: 0 32px 28px;
+    margin-top: -45px;
+}
+
+
+.profile-identity {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+}
+
+
+.profile-avatar-large {
+    width: 96px;
+    height: 96px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    background: #ffffff;
+    color: #2563eb;
+
+    border: 5px solid #ffffff;
+    border-radius: 50%;
+
+    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.15);
+
+    font-size: 42px;
+}
+
+
+.profile-name-area {
+    padding-bottom: 5px;
+}
+
+
+.profile-name-area h2 {
+    margin: 0 0 4px;
+
+    color: #102a43;
+    font-size: 25px;
+}
+
+
+.profile-name-area p {
+    margin: 0;
+
+    color: #64748b;
+    font-size: 14px;
+}
+
+
+/* ================= BUTTONS ================= */
+
+.profile-edit-btn,
+.profile-save-btn,
+.profile-cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 10px 17px;
+
+    border-radius: 10px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+
+.profile-edit-btn,
+.profile-save-btn {
+    border: none;
+
+    background: #2563eb;
+    color: #ffffff;
+}
+
+
+.profile-edit-btn:hover,
+.profile-save-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+
+.profile-cancel-btn {
+    border: 1px solid #d6dfeb;
+
+    background: #ffffff;
+    color: #475569;
+}
+
+
+.profile-cancel-btn:hover {
+    background: #f8fafc;
+}
+
+
+/* ================= PROFILE BODY ================= */
+
+.profile-body {
+    padding: 30px 32px 34px;
+    border-top: 1px solid #e8edf4;
+}
+
+
+.profile-section-title {
+    margin-bottom: 22px;
+}
+
+
+.profile-section-title h3 {
+    margin: 0 0 5px;
+
+    color: #102a43;
+    font-size: 18px;
+}
+
+
+.profile-section-title p {
+    margin: 0;
+
+    color: #7b8ba1;
+    font-size: 13px;
+}
+
+
+/* ================= INFORMATION GRID ================= */
+
+.profile-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+
+.profile-field {
+    padding: 16px 18px;
+
+    background: #f8fafc;
+
+    border: 1px solid #edf1f6;
+    border-radius: 13px;
+}
+
+
+.profile-field label {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: #64748b;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.profile-field input,
+.profile-field textarea {
+    width: 100%;
+
+    padding: 0;
+
+    border: none;
+    outline: none;
+
+    background: transparent;
+
+    color: #102a43;
+
+    font-family: inherit;
+    font-size: 15px;
+
+    resize: none;
+}
+
+
+.profile-field textarea {
+    min-height: 24px;
+}
+
+
+/* Fields while editing */
+
+.profile-field.editing {
+    background: #ffffff;
+    border-color: #9dbbf5;
+
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.07);
+}
+
+
+.profile-field.editing input,
+.profile-field.editing textarea {
+    cursor: text;
+}
+
+
+/* ================= ROLE / STATUS ================= */
+
+.profile-role {
+    color: #475569;
+}
+
+
+.profile-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    width: fit-content;
+
+    padding: 6px 11px;
+
+    background: #e8f8ef;
+    color: #15803d;
+
+    border-radius: 20px;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.profile-status-dot {
+    width: 7px;
+    height: 7px;
+
+    background: #22c55e;
+
+    border-radius: 50%;
+}
+
+
+/* ================= ACTION AREA ================= */
+
+.profile-form-actions {
+    display: none;
+
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin-top: 24px;
+    padding-top: 22px;
+
+    border-top: 1px solid #edf1f6;
+}
+
+
+.profile-form-actions.show {
+    display: flex;
+}
+
+
+/* ================= NOTE ================= */
+
+.profile-ui-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+
+    margin-top: 20px;
+    padding: 13px 15px;
+
+    background: #f0f6ff;
+    color: #52657d;
+
+    border: 1px solid #dce9fb;
+    border-radius: 11px;
+
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+
+.profile-ui-note i {
+    margin-top: 2px;
+    color: #2563eb;
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 800px) {
+
+    .profile-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-header-content {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .profile-identity {
+        align-items: center;
+    }
+
+}

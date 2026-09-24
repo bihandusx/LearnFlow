@@ -9,13 +9,21 @@ $projectName = 'LearnFlow';
 <head>
 
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Question Bank</title>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
+    <title>
+        <?php echo $projectName; ?> | Semester Plans
+    </title>
+
+    <!-- Base Dashboard CSS -->
     <link rel="stylesheet" href="../css/teacher.css">
+
+    <!-- Coordinator CSS -->
     <link rel="stylesheet" href="../css/coordinator.css">
 
+    <!-- Font Awesome -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -27,12 +35,14 @@ $projectName = 'LearnFlow';
 <div class="dashboard-shell">
 
 
-    <!-- ================= SIDEBAR ================= -->
+    <!-- =========================================
+         SIDEBAR
+         ========================================= -->
 
     <aside class="sidebar">
 
 
-        <!-- BRAND -->
+        <!-- LOGO -->
 
         <div class="brand-panel">
 
@@ -55,99 +65,142 @@ $projectName = 'LearnFlow';
         </div>
 
 
+
         <!-- MENU -->
 
         <nav class="sidebar-menu">
 
 
-            <a href="dashboard.php" class="menu-link">
+            <a href="dashboard.php"
+               class="menu-link">
+
                 <i class="fas fa-tachometer-alt"></i>
                 Dashboard
+
             </a>
 
 
-            <a href="profile.php" class="menu-link">
+            <a href="profile.php"
+               class="menu-link">
+
                 <i class="fas fa-user"></i>
                 Profile
+
             </a>
 
 
-            <a href="courses.php" class="menu-link">
+            <a href="courses.php"
+               class="menu-link">
+
                 <i class="fas fa-book-open"></i>
                 Courses
+
             </a>
 
 
-            <a href="academic_schedules.php" class="menu-link">
+            <a href="academic_schedules.php"
+               class="menu-link">
+
                 <i class="fas fa-calendar-alt"></i>
                 Academic Schedules
-            </a>
 
-
-            <a href="semester_plans.php" class="menu-link">
-                <i class="fas fa-calendar-week"></i>
-                Semester Plans
-            </a>
-
-
-            <a href="Review_assignments.php" class="menu-link">
-                <i class="fas fa-chalkboard-teacher"></i>
-                Review Assignments
-            </a>
-
-
-            <a href="exam_schedules.php" class="menu-link">
-                <i class="fas fa-file-alt"></i>
-                Examination Schedules
-            </a>
-
-
-            <a href="course_progress.php" class="menu-link">
-                <i class="fas fa-chart-line"></i>
-                Course Completion
-            </a>
-
-
-            <a href="teacher_performance.php" class="menu-link">
-                <i class="fas fa-user-check"></i>
-                Teacher Performance
-            </a>
-
-
-            <a href="student_engagement.php" class="menu-link">
-                <i class="fas fa-users"></i>
-                Student Engagement
-            </a>
-
-
-            <a href="attendance_statistics.php" class="menu-link">
-                <i class="fas fa-clipboard-check"></i>
-                Attendance Statistics
-            </a>
-
-
-            <a href="learning_resources.php" class="menu-link">
-                <i class="fas fa-folder-open"></i>
-                Learning Resources
-            </a>
-
-
-            <a href="recording_reviews.php" class="menu-link">
-                <i class="fas fa-video"></i>
-                Recording Reviews
-            </a>
-
-
-            <a href="content_standards.php" class="menu-link">
-                <i class="fas fa-check-circle"></i>
-                Content Standards
             </a>
 
 
             <!-- ACTIVE PAGE -->
 
-            <a href="question_bank.php"
+            <a href="semester_plans.php"
                class="menu-link active">
+
+                <i class="fas fa-calendar-week"></i>
+                Semester Plans
+
+            </a>
+
+
+            <a href="Review_assignments.php"
+               class="menu-link">
+
+                <i class="fas fa-chalkboard-teacher"></i>
+                Review Assignments
+
+            </a>
+
+
+            <a href="exam_schedules.php"
+               class="menu-link">
+
+                <i class="fas fa-file-alt"></i>
+                Examination Schedules
+
+            </a>
+
+
+            <a href="course_progress.php"
+               class="menu-link">
+
+                <i class="fas fa-chart-line"></i>
+                Course Completion
+
+            </a>
+
+
+            <a href="teacher_performance.php"
+               class="menu-link">
+
+                <i class="fas fa-user-check"></i>
+                Teacher Performance
+
+            </a>
+
+
+            <a href="student_engagement.php"
+               class="menu-link">
+
+                <i class="fas fa-users"></i>
+                Student Engagement
+
+            </a>
+
+
+            <a href="attendance_statistics.php"
+               class="menu-link">
+
+                <i class="fas fa-clipboard-check"></i>
+                Attendance Statistics
+
+            </a>
+
+
+            <a href="learning_resources.php"
+               class="menu-link">
+
+                <i class="fas fa-folder-open"></i>
+                Learning Resources
+
+            </a>
+
+
+            <a href="recording_reviews.php"
+               class="menu-link">
+
+                <i class="fas fa-video"></i>
+                Recording Reviews
+
+            </a>
+
+
+            <a href="content_standards.php"
+               class="menu-link">
+
+                <i class="fas fa-check-circle"></i>
+                Content Standards
+
+            </a>
+
+
+            <a href="question_bank.php"
+               class="menu-link">
 
                 <i class="fas fa-question-circle"></i>
                 Question Bank
@@ -155,27 +208,39 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <a href="academic_reports.php" class="menu-link">
+            <a href="academic_reports.php"
+               class="menu-link">
+
                 <i class="fas fa-chart-bar"></i>
                 Academic Reports
+
             </a>
 
 
-            <a href="institute_performance.php" class="menu-link">
+            <a href="institute_performance.php"
+               class="menu-link">
+
                 <i class="fas fa-chart-pie"></i>
                 Institute Performance
+
             </a>
 
 
-            <a href="learning_outcomes.php" class="menu-link">
+            <a href="learning_outcomes.php"
+               class="menu-link">
+
                 <i class="fas fa-graduation-cap"></i>
                 Learning Outcomes
+
             </a>
 
 
-            <a href="announcements.php" class="menu-link">
+            <a href="announcements.php"
+               class="menu-link">
+
                 <i class="fas fa-bullhorn"></i>
                 Announcements
+
             </a>
 
 
@@ -190,11 +255,14 @@ $projectName = 'LearnFlow';
 
         </nav>
 
+
     </aside>
 
 
 
-    <!-- ================= CONTENT ================= -->
+    <!-- =========================================
+         CONTENT AREA
+         ========================================= -->
 
     <div class="content-area">
 
@@ -215,11 +283,11 @@ $projectName = 'LearnFlow';
                 <div class="dashboard-title">
 
                     <p class="small-label">
-                        Content Quality Management
+                        Academic Planning
                     </p>
 
                     <h1>
-                        Question Bank
+                        Semester Plans
                     </h1>
 
                 </div>
@@ -271,7 +339,9 @@ $projectName = 'LearnFlow';
 
 
 
-        <!-- ================= MAIN ================= -->
+        <!-- =========================================
+             MAIN
+             ========================================= -->
 
         <main class="dashboard-main">
 
@@ -284,16 +354,16 @@ $projectName = 'LearnFlow';
                 <div>
 
                     <p class="card-label">
-                        Content Quality Management
+                        Academic Planning
                     </p>
 
                     <h2>
-                        Question Bank
+                        Semester Plans
                     </h2>
 
                     <p>
-                        Maintain and organize academic questions
-                        for assessments within the course.
+                        Plan and organize academic semesters
+                        for LearnFlow.
                     </p>
 
                 </div>
@@ -301,7 +371,7 @@ $projectName = 'LearnFlow';
 
                 <div class="page-intro-icon">
 
-                    <i class="fas fa-question-circle"></i>
+                    <i class="fas fa-calendar-week"></i>
 
                 </div>
 
@@ -320,16 +390,16 @@ $projectName = 'LearnFlow';
 
                     <div class="mini-stat-icon">
 
-                        <i class="fas fa-list"></i>
+                        <i class="fas fa-calendar"></i>
 
                     </div>
 
 
                     <div>
 
-                        <p>Total Questions</p>
+                        <p>Total Semester Plans</p>
 
-                        <h3>3</h3>
+                        <h3>1</h3>
 
                     </div>
 
@@ -343,16 +413,16 @@ $projectName = 'LearnFlow';
 
                     <div class="mini-stat-icon">
 
-                        <i class="fas fa-layer-group"></i>
+                        <i class="fas fa-circle-check"></i>
 
                     </div>
 
 
                     <div>
 
-                        <p>Modules Covered</p>
+                        <p>Active Semester</p>
 
-                        <h3>2</h3>
+                        <h3>1</h3>
 
                     </div>
 
@@ -364,7 +434,7 @@ $projectName = 'LearnFlow';
 
 
 
-            <!-- QUESTION TABLE -->
+            <!-- SEMESTER PLAN TABLE -->
 
             <section class="course-table-card">
 
@@ -375,22 +445,21 @@ $projectName = 'LearnFlow';
                     <div>
 
                         <h2>
-                            Question Overview
+                            Semester Plan Overview
                         </h2>
 
                         <p>
-                            Review questions maintained for
-                            course assessments.
+                            View and manage academic semester plans.
                         </p>
 
                     </div>
-
+                  <br>
 
                     <button type="button"
                             class="btn-primary">
 
-                        <i class="fas fa-plus"></i>
-                        Add Question
+                        <i class="fas fa-plus"></i> 
+                        Add Semester Plan
 
                     </button>
 
@@ -409,13 +478,15 @@ $projectName = 'LearnFlow';
 
                             <tr>
 
-                                <th>Question ID</th>
+                                <th>Plan ID</th>
 
-                                <th>Question</th>
+                                <th>Semester</th>
 
-                                <th>Module</th>
+                                <th>Academic Year</th>
 
-                                <th>Type</th>
+                                <th>Start Date</th>
+
+                                <th>End Date</th>
 
                                 <th>Status</th>
 
@@ -429,25 +500,34 @@ $projectName = 'LearnFlow';
                         <tbody>
 
 
-                            <!-- SAMPLE QUESTION 1 -->
-
                             <tr>
 
-                                <td>#Q001</td>
+                                <td>#001</td>
+
 
                                 <td>
+
                                     <strong>
-                                        What is the purpose of this concept?
+                                        Semester 1
                                     </strong>
+
                                 </td>
 
-                                <td>
-                                    Module 1
-                                </td>
 
                                 <td>
-                                    MCQ
+                                    2026
                                 </td>
+
+
+                                <td>
+                                    2026-01-05
+                                </td>
+
+
+                                <td>
+                                    2026-05-30
+                                </td>
+
 
                                 <td>
 
@@ -457,105 +537,18 @@ $projectName = 'LearnFlow';
 
                                 </td>
 
+
                                 <td>
 
                                     <button type="button"
                                             class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
+                                    <i class="fas fa-eye"></i>
                                         View
 
                                     </button>
 
                                 </td>
 
-                            </tr>
-
-
-
-                            <!-- SAMPLE QUESTION 2 -->
-
-                            <tr>
-
-                                <td>#Q002</td>
-
-                                <td>
-                                    <strong>
-                                        Explain the main concept.
-                                    </strong>
-                                </td>
-
-                                <td>
-                                    Module 1
-                                </td>
-
-                                <td>
-                                    Short Answer
-                                </td>
-
-                                <td>
-
-                                    <span class="course-status active-status">
-                                        Active
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
-
-                                </td>
-
-                            </tr>
-
-
-
-                            <!-- SAMPLE QUESTION 3 -->
-
-                            <tr>
-
-                                <td>#Q003</td>
-
-                                <td>
-                                    <strong>
-                                        Describe the practical application.
-                                    </strong>
-                                </td>
-
-                                <td>
-                                    Module 2
-                                </td>
-
-                                <td>
-                                    Essay
-                                </td>
-
-                                <td>
-
-                                    <span class="course-status active-status">
-                                        Active
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
-
-                                </td>
 
                             </tr>
 

@@ -11,7 +11,9 @@ $projectName = 'LearnFlow';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Question Bank</title>
+    <title>
+        <?php echo $projectName; ?> | Student Engagement
+    </title>
 
     <link rel="stylesheet" href="../css/teacher.css">
     <link rel="stylesheet" href="../css/coordinator.css">
@@ -31,9 +33,6 @@ $projectName = 'LearnFlow';
 
     <aside class="sidebar">
 
-
-        <!-- BRAND -->
-
         <div class="brand-panel">
 
             <div class="brand-icon">
@@ -41,21 +40,15 @@ $projectName = 'LearnFlow';
             </div>
 
             <div>
-
-                <p class="brand-label">
-                    LearnFlow
-                </p>
+                <p class="brand-label">LearnFlow</p>
 
                 <p class="brand-subtitle">
                     Academic Coordinator Portal
                 </p>
-
             </div>
 
         </div>
 
-
-        <!-- MENU -->
 
         <nav class="sidebar-menu">
 
@@ -114,9 +107,14 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <a href="student_engagement.php" class="menu-link">
+            <!-- ACTIVE PAGE -->
+
+            <a href="student_engagement.php"
+               class="menu-link active">
+
                 <i class="fas fa-users"></i>
                 Student Engagement
+
             </a>
 
 
@@ -144,14 +142,9 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <!-- ACTIVE PAGE -->
-
-            <a href="question_bank.php"
-               class="menu-link active">
-
+            <a href="question_bank.php" class="menu-link">
                 <i class="fas fa-question-circle"></i>
                 Question Bank
-
             </a>
 
 
@@ -215,11 +208,11 @@ $projectName = 'LearnFlow';
                 <div class="dashboard-title">
 
                     <p class="small-label">
-                        Content Quality Management
+                        Academic Monitoring
                     </p>
 
                     <h1>
-                        Question Bank
+                        Student Engagement
                     </h1>
 
                 </div>
@@ -284,16 +277,17 @@ $projectName = 'LearnFlow';
                 <div>
 
                     <p class="card-label">
-                        Content Quality Management
+                        Academic Monitoring
                     </p>
 
                     <h2>
-                        Question Bank
+                        Student Engagement
                     </h2>
 
                     <p>
-                        Maintain and organize academic questions
-                        for assessments within the course.
+                        Monitor how actively students participate
+                        and engage with learning activities in
+                        the course.
                     </p>
 
                 </div>
@@ -301,7 +295,7 @@ $projectName = 'LearnFlow';
 
                 <div class="page-intro-icon">
 
-                    <i class="fas fa-question-circle"></i>
+                    <i class="fas fa-users"></i>
 
                 </div>
 
@@ -317,22 +311,14 @@ $projectName = 'LearnFlow';
 
                 <article class="mini-stat-card">
 
-
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-list"></i>
-
+                        <i class="fas fa-user-graduate"></i>
                     </div>
-
 
                     <div>
-
-                        <p>Total Questions</p>
-
-                        <h3>3</h3>
-
+                        <p>Total Students</p>
+                        <h3>30</h3>
                     </div>
-
 
                 </article>
 
@@ -340,22 +326,29 @@ $projectName = 'LearnFlow';
 
                 <article class="mini-stat-card">
 
-
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-layer-group"></i>
-
+                        <i class="fas fa-user-check"></i>
                     </div>
-
 
                     <div>
-
-                        <p>Modules Covered</p>
-
-                        <h3>2</h3>
-
+                        <p>Active Students</p>
+                        <h3>25</h3>
                     </div>
 
+                </article>
+
+
+
+                <article class="mini-stat-card">
+
+                    <div class="mini-stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+
+                    <div>
+                        <p>Average Engagement</p>
+                        <h3>83%</h3>
+                    </div>
 
                 </article>
 
@@ -364,36 +357,25 @@ $projectName = 'LearnFlow';
 
 
 
-            <!-- QUESTION TABLE -->
+            <!-- ENGAGEMENT TABLE -->
 
             <section class="course-table-card">
 
 
                 <div class="course-table-heading">
 
-
                     <div>
 
                         <h2>
-                            Question Overview
+                            Student Engagement Overview
                         </h2>
 
                         <p>
-                            Review questions maintained for
-                            course assessments.
+                            Review student participation and
+                            learning activity within the course.
                         </p>
 
                     </div>
-
-
-                    <button type="button"
-                            class="btn-primary">
-
-                        <i class="fas fa-plus"></i>
-                        Add Question
-
-                    </button>
-
 
                 </div>
 
@@ -408,19 +390,12 @@ $projectName = 'LearnFlow';
                         <thead>
 
                             <tr>
-
-                                <th>Question ID</th>
-
-                                <th>Question</th>
-
-                                <th>Module</th>
-
-                                <th>Type</th>
-
+                                <th>Student ID</th>
+                                <th>Student Name</th>
+                                <th>Attendance</th>
+                                <th>Learning Activities</th>
+                                <th>Engagement Level</th>
                                 <th>Status</th>
-
-                                <th>Action</th>
-
                             </tr>
 
                         </thead>
@@ -429,132 +404,84 @@ $projectName = 'LearnFlow';
                         <tbody>
 
 
-                            <!-- SAMPLE QUESTION 1 -->
+                            <!-- SAMPLE STUDENT 1 -->
 
                             <tr>
 
-                                <td>#Q001</td>
+                                <td>#S001</td>
 
                                 <td>
-                                    <strong>
-                                        What is the purpose of this concept?
-                                    </strong>
+                                    <strong>Student 1</strong>
+                                </td>
+
+                                <td>95%</td>
+
+                                <td>18 / 20</td>
+
+                                <td>
+                                    <strong>90%</strong>
                                 </td>
 
                                 <td>
-                                    Module 1
-                                </td>
-
-                                <td>
-                                    MCQ
-                                </td>
-
-                                <td>
-
                                     <span class="course-status active-status">
-                                        Active
+                                        High
                                     </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
-
                                 </td>
 
                             </tr>
 
 
 
-                            <!-- SAMPLE QUESTION 2 -->
+                            <!-- SAMPLE STUDENT 2 -->
 
                             <tr>
 
-                                <td>#Q002</td>
+                                <td>#S002</td>
 
                                 <td>
-                                    <strong>
-                                        Explain the main concept.
-                                    </strong>
+                                    <strong>Student 2</strong>
+                                </td>
+
+                                <td>85%</td>
+
+                                <td>15 / 20</td>
+
+                                <td>
+                                    <strong>80%</strong>
                                 </td>
 
                                 <td>
-                                    Module 1
-                                </td>
-
-                                <td>
-                                    Short Answer
-                                </td>
-
-                                <td>
-
                                     <span class="course-status active-status">
-                                        Active
+                                        Good
                                     </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
-
                                 </td>
 
                             </tr>
 
 
 
-                            <!-- SAMPLE QUESTION 3 -->
+                            <!-- SAMPLE STUDENT 3 -->
 
                             <tr>
 
-                                <td>#Q003</td>
+                                <td>#S003</td>
 
                                 <td>
-                                    <strong>
-                                        Describe the practical application.
-                                    </strong>
+                                    <strong>Student 3</strong>
+                                </td>
+
+                                <td>70%</td>
+
+                                <td>11 / 20</td>
+
+                                <td>
+                                    <strong>65%</strong>
                                 </td>
 
                                 <td>
-                                    Module 2
-                                </td>
-
-                                <td>
-                                    Essay
-                                </td>
-
-                                <td>
-
-                                    <span class="course-status active-status">
-                                        Active
+                                    <span class="course-status">
+                                        Moderate
                                     </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
-
                                 </td>
 
                             </tr>

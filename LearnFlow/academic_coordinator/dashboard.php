@@ -67,101 +67,111 @@ $projectName = 'LearnFlow';
 
 
         <!-- MENU -->
+          <nav class="sidebar-menu">
 
-        <nav class="sidebar-menu">
+    <a href="dashboard.php" class="menu-link active">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+    </a>
 
+    <a href="profile.php" class="menu-link">
+        <i class="fas fa-user"></i>
+        Profile
+    </a>
 
-            <a href="dashboard.php"
-               class="menu-link active">
+    <a href="courses.php" class="menu-link">
+        <i class="fas fa-book-open"></i>
+        Courses
+    </a>
 
-                <i class="fas fa-tachometer-alt"></i>
-                Dashboard
+    <a href="academic_schedules.php" class="menu-link">
+        <i class="fas fa-calendar-alt"></i>
+        Academic Schedules
+    </a>
 
-            </a>
+    <a href="semester_plans.php" class="menu-link">
+        <i class="fas fa-calendar-week"></i>
+        Semester Plans
+    </a>
 
+    <a href="Review_assignments.php" class="menu-link">
+        <i class="fas fa-chalkboard-teacher"></i>
+        Review Assignments
+    </a>
 
-            <a href="profile.php"
-               class="menu-link">
+    <a href="exam_schedules.php" class="menu-link">
+        <i class="fas fa-file-alt"></i>
+        Examination Schedules
+    </a>
 
-                <i class="fas fa-user"></i>
-                Profile
+    <a href="course_progress.php" class="menu-link">
+        <i class="fas fa-chart-line"></i>
+        Course Completion
+    </a>
 
-            </a>
+    <a href="teacher_performance.php" class="menu-link">
+        <i class="fas fa-user-check"></i>
+        Teacher Performance
+    </a>
 
+    <a href="student_engagement.php" class="menu-link">
+        <i class="fas fa-users"></i>
+        Student Engagement
+    </a>
 
-            <a href="courses.php"
-               class="menu-link">
+    <a href="attendance_statistics.php" class="menu-link">
+        <i class="fas fa-clipboard-check"></i>
+        Attendance Statistics
+    </a>
 
-                <i class="fas fa-book-open"></i>
-                Courses
+    <a href="learning_resources.php" class="menu-link">
+        <i class="fas fa-folder-open"></i>
+        Learning Resources
+    </a>
 
-            </a>
+    <a href="recording_reviews.php" class="menu-link">
+        <i class="fas fa-video"></i>
+        Recording Reviews
+    </a>
 
+    <a href="content_standards.php" class="menu-link">
+        <i class="fas fa-check-circle"></i>
+        Content Standards
+    </a>
 
-            <a href="academic_terms.php"
-               class="menu-link">
+    <a href="question_bank.php" class="menu-link">
+        <i class="fas fa-question-circle"></i>
+        Question Bank
+    </a>
 
-                <i class="fas fa-calendar-week"></i>
-                Academic Terms
+    <a href="academic_reports.php" class="menu-link">
+        <i class="fas fa-chart-bar"></i>
+        Academic Reports
+    </a>
 
-            </a>
+    <a href="institute_performance.php" class="menu-link">
+        <i class="fas fa-chart-pie"></i>
+        Institute Performance
+    </a>
 
+    <a href="learning_outcomes.php" class="menu-link">
+        <i class="fas fa-graduation-cap"></i>
+        Learning Outcomes
+    </a>
 
-            <a href="teacher_courses.php"
-               class="menu-link">
+    <a href="announcements.php" class="menu-link">
+        <i class="fas fa-bullhorn"></i>
+        Announcements
+    </a>
 
-                <i class="fas fa-chalkboard-teacher"></i>
-                Teacher Assignments
+    <a href="../auth/logout.php" class="menu-link logout-link">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+    </a>
 
-            </a>
+</nav>
 
-
-            <a href="question_bank.php"
-               class="menu-link">
-
-                <i class="fas fa-question-circle"></i>
-                Question Bank
-
-            </a>
-
-
-            <a href="learning_resources.php"
-               class="menu-link">
-
-                <i class="fas fa-folder-open"></i>
-                Learning Resources
-
-            </a>
-
-
-            <a href="announcements.php"
-               class="menu-link">
-
-                <i class="fas fa-bullhorn"></i>
-                Announcements
-
-            </a>
-
-
-            <a href="academic_reports.php"
-               class="menu-link">
-
-                <i class="fas fa-chart-bar"></i>
-                Academic Reports
-
-            </a>
-
-
-            <a href="../auth/logout.php"
-               class="menu-link logout-link">
-
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
-
-            </a>
-
-
-        </nav>
+        
 
     </aside>
 
@@ -251,304 +261,519 @@ $projectName = 'LearnFlow';
         <!-- ======================================
              MAIN DASHBOARD
              ====================================== -->
-
         <main class="dashboard-main">
 
+    <!-- ================= WELCOME ================= -->
 
-            <!-- ==================================
-                 OVERVIEW
-                 ================================== -->
+    <section class="coordinator-welcome">
 
-            <section class="overview-cards">
+        <div class="welcome-content">
 
+            <p class="card-label">ACADEMIC COORDINATOR</p>
 
-                <!-- Welcome card -->
+            <h2>Welcome back, <?php echo $coordinatorName; ?></h2>
 
-                <article class="summary-card">
+            <p>
+                Manage academic planning, monitor learning progress,
+                maintain content quality and review academic performance.
+            </p>
 
+        </div>
 
-                    <div>
+        <div class="welcome-icon">
+            <i class="fas fa-user-graduate"></i>
+        </div>
 
-                        <p class="card-label">
-                            Welcome back
-                        </p>
+    </section>
 
-                        <h2>
-                            Keep learning on track and
-                            academic standards high.
-                        </h2>
 
-                    </div>
+    <!-- ================= QUICK OVERVIEW ================= -->
 
+    <section class="dashboard-overview-grid">
 
-                    <div class="summary-icon">
+        <article class="overview-card">
 
-                        <i class="fas fa-user-graduate"></i>
+            <div class="overview-icon">
+                <i class="fas fa-book-open"></i>
+            </div>
 
-                    </div>
+            <div>
+                <p>Course</p>
+                <h3>1</h3>
+                <span>Academic course</span>
+            </div>
 
+        </article>
 
-                </article>
 
+        <article class="overview-card">
 
+            <div class="overview-icon">
+                <i class="fas fa-layer-group"></i>
+            </div>
 
-                <!-- Active courses -->
+            <div>
+                <p>Modules</p>
+                <h3>4</h3>
+                <span>Course modules</span>
+            </div>
 
-                <article class="stat-card">
+        </article>
 
 
-                    <div>
+        <article class="overview-card">
 
-                        <p class="card-label">
-                            Active Courses
-                        </p>
+            <div class="overview-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
 
-                        <h3>
-                            0
-                        </h3>
+            <div>
+                <p>Course Progress</p>
+                <h3>50%</h3>
+                <span>Overall completion</span>
+            </div>
 
-                    </div>
+        </article>
 
 
-                    <span class="stat-badge">
-                        Current term
-                    </span>
+        <article class="overview-card">
 
+            <div class="overview-icon">
+                <i class="fas fa-clock"></i>
+            </div>
 
-                </article>
+            <div>
+                <p>Pending Reviews</p>
+                <h3>2</h3>
+                <span>Require attention</span>
+            </div>
 
+        </article>
 
+    </section>
 
-                <!-- Pending approvals -->
 
-                <article class="stat-card">
 
+    <!-- ==================================================
+         ACADEMIC PLANNING
+    =================================================== -->
 
-                    <div>
+   <section class="dashboard-feature-section planning-section">
 
-                        <p class="card-label">
-                            Pending Approvals
-                        </p>
 
-                        <h3>
-                            0
-                        </h3>
+        <div class="feature-section-heading">
 
-                    </div>
+            <div class="section-heading-icon">
+                <i class="fas fa-calendar-check"></i>
+            </div>
 
+            <div>
+                <h2>Academic Planning</h2>
+                <p>Plan and coordinate academic activities.</p>
+            </div>
 
-                    <span class="stat-badge">
-                        Review resources
-                    </span>
+        </div>
 
 
-                </article>
+        <div class="professional-feature-grid">
 
 
-            </section>
+            <a href="courses.php" class="professional-feature-card">
 
+                <div class="feature-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
 
+                <div>
+                    <h3>Course Overview</h3>
+                    <p>View and coordinate the academic course.</p>
+                </div>
 
-            <!-- ==================================
-                 COORDINATOR FEATURES
-                 ================================== -->
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
-            <section class="card-grid">
+            </a>
 
 
-                <!-- COURSES -->
 
-                <a href="courses.php"
-                   class="dashboard-card">
+            <a href="academic_schedules.php"
+               class="professional-feature-card">
 
+                <div class="feature-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
 
-                    <div class="card-icon bg-blue">
+                <div>
+                    <h3>Academic Schedules</h3>
+                    <p>Create and manage academic schedules.</p>
+                </div>
 
-                        <i class="fas fa-book-open"></i>
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
-                    </div>
+            </a>
 
 
-                    <h3>
-                        Courses
-                    </h3>
 
+            <a href="semester_plans.php"
+               class="professional-feature-card">
 
-                    <p>
-                        Coordinate and oversee academic courses.
-                    </p>
+                <div class="feature-icon">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
 
+                <div>
+                    <h3>Semester Plans</h3>
+                    <p>Plan and organize semester activities.</p>
+                </div>
 
-                </a>
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
+            </a>
 
 
-                <!-- ACADEMIC TERMS -->
 
-                <a href="academic_terms.php"
-                   class="dashboard-card">
+            <a href="Review_assignments.php"
+               class="professional-feature-card">
 
+                <div class="feature-icon">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
 
-                    <div class="card-icon bg-purple">
+                <div>
+                    <h3>Review Assignments</h3>
+                    <p>Review teacher and module assignments.</p>
+                </div>
 
-                        <i class="fas fa-calendar-week"></i>
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
-                    </div>
+            </a>
 
 
-                    <h3>
-                        Academic Terms
-                    </h3>
 
+            <a href="exam_schedules.php"
+               class="professional-feature-card">
 
-                    <p>
-                        Plan and manage academic terms.
-                    </p>
+                <div class="feature-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
 
+                <div>
+                    <h3>Examination Schedules</h3>
+                    <p>Plan and review examination schedules.</p>
+                </div>
 
-                </a>
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
+            </a>
 
 
-                <!-- TEACHER ASSIGNMENTS -->
+        </div>
 
-                <a href="teacher_courses.php"
-                   class="dashboard-card">
+    </section>
 
 
-                    <div class="card-icon bg-green">
 
-                        <i class="fas fa-chalkboard-teacher"></i>
+    <!-- ==================================================
+         ACADEMIC MONITORING
+    =================================================== -->
 
-                    </div>
+    <section class="dashboard-feature-section monitoring-section">
 
 
-                    <h3>
-                        Teacher Assignments
-                    </h3>
+        <div class="feature-section-heading">
 
+            <div class="section-heading-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
 
-                    <p>
-                        Assign teachers to academic courses.
-                    </p>
+            <div>
+                <h2>Academic Monitoring</h2>
+                <p>Monitor progress, performance and engagement.</p>
+            </div>
 
+        </div>
 
-                </a>
 
+        <div class="professional-feature-grid">
 
 
-                <!-- QUESTION BANK -->
+            <a href="course_progress.php"
+               class="professional-feature-card">
 
-                <a href="question_bank.php"
-                   class="dashboard-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
 
+                <div>
+                    <h3>Course Completion</h3>
+                    <p>Monitor module and course completion.</p>
+                </div>
 
-                    <div class="card-icon bg-indigo">
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
-                        <i class="fas fa-question-circle"></i>
+            </a>
 
-                    </div>
 
 
-                    <h3>
-                        Question Bank
-                    </h3>
+            <a href="teacher_performance.php"
+               class="professional-feature-card">
 
+                <div class="feature-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
 
-                    <p>
-                        Maintain academic question banks.
-                    </p>
+                <div>
+                    <h3>Teacher Performance</h3>
+                    <p>Review teaching activity and performance.</p>
+                </div>
 
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
-                </a>
+            </a>
 
 
 
-                <!-- LEARNING RESOURCES -->
+            <a href="student_engagement.php"
+               class="professional-feature-card">
 
-                <a href="learning_resources.php"
-                   class="dashboard-card">
+                <div class="feature-icon">
+                    <i class="fas fa-users"></i>
+                </div>
 
+                <div>
+                    <h3>Student Engagement</h3>
+                    <p>Monitor student participation and engagement.</p>
+                </div>
 
-                    <div class="card-icon bg-cyan">
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
-                        <i class="fas fa-folder-open"></i>
+            </a>
 
-                    </div>
 
 
-                    <h3>
-                        Learning Resources
-                    </h3>
+            <a href="attendance_statistics.php"
+               class="professional-feature-card">
 
+                <div class="feature-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
 
-                    <p>
-                        Review and approve learning resources.
-                    </p>
+                <div>
+                    <h3>Attendance Statistics</h3>
+                    <p>Review student attendance information.</p>
+                </div>
 
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
-                </a>
+            </a>
 
 
+        </div>
 
-                <!-- ANNOUNCEMENTS -->
+    </section>
 
-                <a href="announcements.php"
-                   class="dashboard-card">
 
 
-                    <div class="card-icon bg-orange">
+    <!-- ==================================================
+         CONTENT QUALITY MANAGEMENT
+    =================================================== -->
 
-                        <i class="fas fa-bullhorn"></i>
+    <section class="dashboard-feature-section quality-section">
 
-                    </div>
+        <div class="feature-section-heading">
 
+            <div class="section-heading-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
 
-                    <h3>
-                        Announcements
-                    </h3>
+            <div>
+                <h2>Content Quality Management</h2>
+                <p>Review and maintain academic content quality.</p>
+            </div>
 
+        </div>
 
-                    <p>
-                        Publish academic announcements.
-                    </p>
 
+        <div class="professional-feature-grid">
 
-                </a>
 
+            <a href="learning_resources.php"
+               class="professional-feature-card">
 
+                <div class="feature-icon">
+                    <i class="fas fa-folder-open"></i>
+                </div>
 
-                <!-- ACADEMIC REPORTS -->
+                <div>
+                    <h3>Learning Resources</h3>
+                    <p>Manage and approve learning resources.</p>
+                </div>
 
-                <a href="academic_reports.php"
-                   class="dashboard-card">
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
+            </a>
 
-                    <div class="card-icon bg-red">
 
-                        <i class="fas fa-chart-bar"></i>
 
-                    </div>
+            <a href="recording_reviews.php"
+               class="professional-feature-card">
 
+                <div class="feature-icon">
+                    <i class="fas fa-video"></i>
+                </div>
 
-                    <h3>
-                        Academic Reports
-                    </h3>
+                <div>
+                    <h3>Recording Reviews</h3>
+                    <p>Review uploaded course recordings.</p>
+                </div>
 
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
-                    <p>
-                        Generate and review academic reports.
-                    </p>
+            </a>
 
 
-                </a>
 
+            <a href="content_standards.php"
+               class="professional-feature-card">
 
-            </section>
+                <div class="feature-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
 
+                <div>
+                    <h3>Content Standards</h3>
+                    <p>Ensure academic content meets standards.</p>
+                </div>
 
-        </main>
+                <i class="fas fa-arrow-right feature-arrow"></i>
 
+            </a>
+
+
+
+            <a href="question_bank.php"
+               class="professional-feature-card">
+
+                <div class="feature-icon">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+
+                <div>
+                    <h3>Question Bank</h3>
+                    <p>Maintain questions for assessments.</p>
+                </div>
+
+                <i class="fas fa-arrow-right feature-arrow"></i>
+
+            </a>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ==================================================
+         REPORTING & COMMUNICATION
+    =================================================== -->
+
+    <section class="dashboard-feature-section reporting-section">
+
+        <div class="feature-section-heading">
+
+            <div class="section-heading-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+
+            <div>
+                <h2>Reporting & Communication</h2>
+                <p>Review academic performance and communicate updates.</p>
+            </div>
+
+        </div>
+
+
+        <div class="professional-feature-grid">
+
+
+            <a href="academic_reports.php"
+               class="professional-feature-card">
+
+                <div class="feature-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+
+                <div>
+                    <h3>Academic Reports</h3>
+                    <p>Generate and review academic reports.</p>
+                </div>
+
+                <i class="fas fa-arrow-right feature-arrow"></i>
+
+            </a>
+
+
+
+            <a href="institute_performance.php"
+               class="professional-feature-card">
+
+                <div class="feature-icon">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+
+                <div>
+                    <h3>Institute Performance</h3>
+                    <p>Track overall academic performance.</p>
+                </div>
+
+                <i class="fas fa-arrow-right feature-arrow"></i>
+
+            </a>
+
+
+
+            <a href="learning_outcomes.php"
+               class="professional-feature-card">
+
+                <div class="feature-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+
+                <div>
+                    <h3>Learning Outcomes</h3>
+                    <p>Monitor achievement of learning outcomes.</p>
+                </div>
+
+                <i class="fas fa-arrow-right feature-arrow"></i>
+
+            </a>
+
+
+
+            <a href="announcements.php"
+               class="professional-feature-card">
+
+                <div class="feature-icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+
+                <div>
+                    <h3>Announcements</h3>
+                    <p>Publish academic announcements.</p>
+                </div>
+
+                <i class="fas fa-arrow-right feature-arrow"></i>
+
+            </a>
+
+
+        </div>
+
+    </section>
+
+
+</main>
+        
 
     </div>
 

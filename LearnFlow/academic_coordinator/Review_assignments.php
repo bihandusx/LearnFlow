@@ -11,7 +11,7 @@ $projectName = 'LearnFlow';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Courses</title>
+    <title><?php echo $projectName; ?> | Reveiw Assignments</title>
 
     <link rel="stylesheet" href="../css/teacher.css">
     <link rel="stylesheet" href="../css/coordinator.css">
@@ -47,7 +47,7 @@ $projectName = 'LearnFlow';
         </div>
 
 
-  <nav class="sidebar-menu">
+        <nav class="sidebar-menu">
 
     <a href="dashboard.php" class="menu-link">
         <i class="fas fa-tachometer-alt"></i>
@@ -59,11 +59,10 @@ $projectName = 'LearnFlow';
         Profile
     </a>
 
-    <a href="courses.php" class="menu-link active">
+    <a href="courses.php" class="menu-link">
         <i class="fas fa-book-open"></i>
         Courses
     </a>
-
 
     <a href="academic_schedules.php" class="menu-link">
         <i class="fas fa-calendar-alt"></i>
@@ -75,7 +74,7 @@ $projectName = 'LearnFlow';
         Semester Plans
     </a>
 
-    <a href="Review_assignments.php" class="menu-link">
+    <a href="Review_assignments.php" class="menu-link active">
         <i class="fas fa-chalkboard-teacher"></i>
         Review Assignments
     </a>
@@ -151,8 +150,8 @@ $projectName = 'LearnFlow';
     </a>
 
 </nav>
-</aside>
 
+</aside>
     <!-- ================= CONTENT ================= -->
 
     <div class="content-area">
@@ -170,11 +169,8 @@ $projectName = 'LearnFlow';
 
                 <div class="dashboard-title">
 
-                    <p class="small-label">
-                        Academic Management
-                    </p>
-
-                    <h1>Courses</h1>
+                    <p class="small-label">Academic Management</p>
+                    <h1>Teacher Assignments</h1>
 
                 </div>
 
@@ -219,169 +215,102 @@ $projectName = 'LearnFlow';
 
 
             <!-- PAGE INFORMATION -->
-
-            <section class="page-intro-card">
-
-                <div>
-
-                    <p class="card-label">
-                     Course Coordination 
-                    </p>
-                    <h2>Course Overview</h2>
-
-                    <p>
-                     View and monitor the academic course delivered through LearnFlow.
-                    </p>
-
+        <section class="page-intro-card">
+                
+             <div>
+                <p class="card-label">Teacher Course Assignment</p>
+                <h2>Teacher Assignments</h2>
+                <p>
+                     View and manage teacher assignments for academic courses.
+                </p>
+            </div>
+            
+            <div class="page-intro-icon">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+        </section>
+        
+        <section class="course-summary-grid">
+            <article class="mini-stat-card">
+                <div class="mini-stat-icon">
+                    <i class="fas fa-user-tie"></i>
                 </div>
-
-                <div class="page-intro-icon">
+                
+                <div>
+                    <p>Total Teachers</p>
+                    <h3>1</h3>
+                </div>
+            </article>
+            
+            <article class="mini-stat-card">
+                <div class="mini-stat-icon">
                     <i class="fas fa-book-open"></i>
                 </div>
-
-            </section>
-
-
-
-            <!-- COURSE SUMMARY -->
-
-            <section class="course-summary-grid">
-
-
-                <article class="mini-stat-card">
-
-                    <div class="mini-stat-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
-
-                    <div>
-                        <p>Total Courses</p>
-                        <h3>1</h3>
-                    </div>
-
-                </article>
-
-
-                <article class="mini-stat-card">
-
-                    <div class="mini-stat-icon">
-                        <i class="fas fa-circle-check"></i>
-                    </div>
-
-                    <div>
-                        <p>Active Courses</p>
-                        <h3>1</h3>
-                    </div>
-
-                </article>
-
-
-                <article class="mini-stat-card">
-
-                    <div class="mini-stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-
-                    <div>
-                        <p>Current Batches</p>
-                        <h3>1</h3>
-                    </div>
-
-                </article>
-
-
-            </section>
-
-
-
-            <!-- COURSE TABLE -->
-
-            <section class="course-table-card">
-
-
-                <div class="course-table-heading">
-
-                    <div>
-
-                        <h2>Course Overview</h2>
-
-                        <p>
-                            Academic courses currently available
-                            in the system.
-                        </p>
-
-                    </div>
-
+                
+                <div>
+                    <p>Assigned Courses</p>
+                    <h3>1</h3>
                 </div>
+            </article>
+            
+            <article class="mini-stat-card">
+                <div class="mini-stat-icon">
+                    <i class="fas fa-link"></i>
+                </div>
+                
+                <div>
+                    <p>Assignments</p>
+                    <h3>1</h3>
+                </div>
+            </article>
+        </section>
+        
+        <section class="course-table-card">
 
-
-
-                <div class="table-responsive">
-
-
-                    <table class="coordinator-table">
-
-
-                        <thead>
-
+            <div class="course-table-heading">
+                <div>
+                    <h2>Teacher Course Overview</h2>
+                    <p>
+                        View teachers currently assigned to academic courses.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="coordinator-table">
+                    <thead>
                         <tr>
-                            <th>Course ID</th>
-                            <th>Course Name</th>
-                            <th>Description</th>
+                            <th>Assignment ID</th>
+                            <th>Teacher</th>
+                            <th>Course</th>
                             <th>Status</th>
                         </tr>
+                    </thead>
+                    
+                    <tbody>
 
-                        </thead>
-
-
-                        <tbody>
-
-
-                        <!-- UI sample data -->
+                     <!-- UI sample data -->
 
                         <tr>
-
                             <td>#001</td>
-
                             <td>
-                                <strong>
-                                    Web Development
-                                </strong>
+                                <strong>Teacher Himaa</strong>
                             </td>
-
+                            <td>Web Development</td>
                             <td>
-                                Web development course
-                            </td>
-
-                            <td>
-
                                 <span class="course-status active-status">
-                                    Active
+                                    Assigned
                                 </span>
-
                             </td>
-
                         </tr>
 
+                    </tbody>
 
-                        </tbody>
-
-
-                    </table>
-
-
-                </div>
-
-
-            </section>
-
-
-        </main>
-
-
-    </div>
-
-
+                </table>
+            </div>
+        </section> 
+    </main>
+</div>
 </div>
 
 

@@ -93,7 +93,7 @@ if (isset($_POST['update_resource'])) {
     header("Location: learning_resources.php");
     exit();
 }
-//________________________end update____________________________________________________
+// end____________________________________________________
 $editResource = null;
 
 if (isset($_GET['edit'])) {
@@ -190,65 +190,110 @@ $rejectedCount = mysqli_fetch_assoc($rejectedResult)['total'];
         </div>
 
 
-        <nav class="sidebar-menu">
+  <nav class="sidebar-menu">
 
-            <a href="dashboard.php" class="menu-link">
-                <i class="fas fa-tachometer-alt"></i>
-                Dashboard
-            </a>
+    <a href="dashboard.php" class="menu-link">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+    </a>
 
-            <a href="profile.php" class="menu-link">
-                <i class="fas fa-user"></i>
-                Profile
-            </a>
+    <a href="profile.php" class="menu-link">
+        <i class="fas fa-user"></i>
+        Profile
+    </a>
 
-           <a href="courses.php" class="menu-link">
-            <i class="fas fa-calendar-week"></i>
-            Courses
-           </a>
+    <a href="courses.php" class="menu-link">
+        <i class="fas fa-book-open"></i>
+        Courses
+    </a>
 
-            <a href="academic_terms.php" class="menu-link">
-                <i class="fas fa-calendar-week"></i>
-                Academic Terms
-            </a>
+    <<a href="academic_schedules.php" class="menu-link">
+        <i class="fas fa-calendar-alt"></i>
+        Academic Schedules
+    </a>
 
-            <a href="teacher_courses.php" class="menu-link">
-                <i class="fas fa-chalkboard-teacher"></i>
-                Teacher Assignments
-            </a>
+    <a href="semester_plans.php" class="menu-link">
+        <i class="fas fa-calendar-week"></i>
+        Semester Plans
+    </a>
 
-            <a href="question_bank.php" class="menu-link ">
-                <i class="fas fa-question-circle"></i>
-                Question Bank
-            </a>
+    <a href="Review_assignments.php" class="menu-link">
+        <i class="fas fa-chalkboard-teacher"></i>
+        Review Assignments
+    </a>
 
-            <a href="learning_resources.php" class="menu-link active">
-                <i class="fas fa-folder-open"></i>
-                Learning Resources
-            </a>
+    <a href="exam_schedules.php" class="menu-link">
+        <i class="fas fa-file-alt"></i>
+        Examination Schedules
+    </a>
 
-            <a href="announcements.php" class="menu-link">
-                <i class="fas fa-bullhorn"></i>
-                Announcements
-            </a>
+    <a href="course_progress.php" class="menu-link">
+        <i class="fas fa-chart-line"></i>
+        Course Completion
+    </a>
 
-            <a href="academic_reports.php" class="menu-link">
-                <i class="fas fa-chart-bar"></i>
-                Academic Reports
-            </a>
+    <a href="teacher_performance.php" class="menu-link">
+        <i class="fas fa-user-check"></i>
+        Teacher Performance
+    </a>
 
-            <a href="../auth/logout.php"
-               class="menu-link logout-link">
+    <a href="student_engagement.php" class="menu-link">
+        <i class="fas fa-users"></i>
+        Student Engagement
+    </a>
 
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
+    <a href="attendance_statistics.php" class="menu-link">
+        <i class="fas fa-clipboard-check"></i>
+        Attendance Statistics
+    </a>
 
-            </a>
+    <a href="learning_resources.php" class="menu-link active">
+        <i class="fas fa-folder-open"></i>
+        Learning Resources
+    </a>
 
-        </nav>
+    <a href="recording_reviews.php" class="menu-link">
+        <i class="fas fa-video"></i>
+        Recording Reviews
+    </a>
 
-    </aside>
+    <a href="content_standards.php" class="menu-link">
+        <i class="fas fa-check-circle"></i>
+        Content Standards
+    </a>
 
+    <a href="question_bank.php" class="menu-link">
+        <i class="fas fa-question-circle"></i>
+        Question Bank
+    </a>
+
+    <a href="academic_reports.php" class="menu-link">
+        <i class="fas fa-chart-bar"></i>
+        Academic Reports
+    </a>
+
+    <a href="institute_performance.php" class="menu-link">
+        <i class="fas fa-chart-pie"></i>
+        Institute Performance
+    </a>
+
+    <a href="learning_outcomes.php" class="menu-link">
+        <i class="fas fa-graduation-cap"></i>
+        Learning Outcomes
+    </a>
+
+    <a href="announcements.php" class="menu-link">
+        <i class="fas fa-bullhorn"></i>
+        Announcements
+    </a>
+
+    <a href="../auth/logout.php" class="menu-link logout-link">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+    </a>
+
+</nav>
+</aside>
 
 
     <!-- ================= CONTENT ================= -->

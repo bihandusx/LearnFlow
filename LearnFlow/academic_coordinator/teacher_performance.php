@@ -11,7 +11,9 @@ $projectName = 'LearnFlow';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Question Bank</title>
+    <title>
+        <?php echo $projectName; ?> | Teacher Performance
+    </title>
 
     <link rel="stylesheet" href="../css/teacher.css">
     <link rel="stylesheet" href="../css/coordinator.css">
@@ -31,8 +33,6 @@ $projectName = 'LearnFlow';
 
     <aside class="sidebar">
 
-
-        <!-- BRAND -->
 
         <div class="brand-panel">
 
@@ -54,8 +54,6 @@ $projectName = 'LearnFlow';
 
         </div>
 
-
-        <!-- MENU -->
 
         <nav class="sidebar-menu">
 
@@ -108,9 +106,14 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <a href="teacher_performance.php" class="menu-link">
+            <!-- ACTIVE PAGE -->
+
+            <a href="teacher_performance.php"
+               class="menu-link active">
+
                 <i class="fas fa-user-check"></i>
                 Teacher Performance
+
             </a>
 
 
@@ -144,14 +147,9 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <!-- ACTIVE PAGE -->
-
-            <a href="question_bank.php"
-               class="menu-link active">
-
+            <a href="question_bank.php" class="menu-link">
                 <i class="fas fa-question-circle"></i>
                 Question Bank
-
             </a>
 
 
@@ -190,11 +188,12 @@ $projectName = 'LearnFlow';
 
         </nav>
 
+
     </aside>
 
 
 
-    <!-- ================= CONTENT ================= -->
+    <!-- ================= CONTENT AREA ================= -->
 
     <div class="content-area">
 
@@ -215,11 +214,11 @@ $projectName = 'LearnFlow';
                 <div class="dashboard-title">
 
                     <p class="small-label">
-                        Content Quality Management
+                        Academic Monitoring
                     </p>
 
                     <h1>
-                        Question Bank
+                        Teacher Performance
                     </h1>
 
                 </div>
@@ -284,16 +283,17 @@ $projectName = 'LearnFlow';
                 <div>
 
                     <p class="card-label">
-                        Content Quality Management
+                        Academic Monitoring
                     </p>
 
                     <h2>
-                        Question Bank
+                        Teacher Performance
                     </h2>
 
                     <p>
-                        Maintain and organize academic questions
-                        for assessments within the course.
+                        Review the academic performance and
+                        teaching activity of teachers assigned
+                        to the course.
                     </p>
 
                 </div>
@@ -301,7 +301,7 @@ $projectName = 'LearnFlow';
 
                 <div class="page-intro-icon">
 
-                    <i class="fas fa-question-circle"></i>
+                    <i class="fas fa-user-check"></i>
 
                 </div>
 
@@ -319,17 +319,15 @@ $projectName = 'LearnFlow';
 
 
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-list"></i>
-
+                        <i class="fas fa-chalkboard-teacher"></i>
                     </div>
 
 
                     <div>
 
-                        <p>Total Questions</p>
+                        <p>Assigned Teachers</p>
 
-                        <h3>3</h3>
+                        <h3>2</h3>
 
                     </div>
 
@@ -342,15 +340,34 @@ $projectName = 'LearnFlow';
 
 
                     <div class="mini-stat-icon">
-
                         <i class="fas fa-layer-group"></i>
-
                     </div>
 
 
                     <div>
 
                         <p>Modules Covered</p>
+
+                        <h3>4</h3>
+
+                    </div>
+
+
+                </article>
+
+
+
+                <article class="mini-stat-card">
+
+
+                    <div class="mini-stat-icon">
+                        <i class="fas fa-circle-check"></i>
+                    </div>
+
+
+                    <div>
+
+                        <p>Active Teachers</p>
 
                         <h3>2</h3>
 
@@ -364,7 +381,7 @@ $projectName = 'LearnFlow';
 
 
 
-            <!-- QUESTION TABLE -->
+            <!-- PERFORMANCE TABLE -->
 
             <section class="course-table-card">
 
@@ -375,24 +392,15 @@ $projectName = 'LearnFlow';
                     <div>
 
                         <h2>
-                            Question Overview
+                            Teacher Performance Overview
                         </h2>
 
                         <p>
-                            Review questions maintained for
-                            course assessments.
+                            Review teacher activity and course
+                            delivery progress.
                         </p>
 
                     </div>
-
-
-                    <button type="button"
-                            class="btn-primary">
-
-                        <i class="fas fa-plus"></i>
-                        Add Question
-
-                    </button>
 
 
                 </div>
@@ -409,13 +417,15 @@ $projectName = 'LearnFlow';
 
                             <tr>
 
-                                <th>Question ID</th>
+                                <th>Teacher ID</th>
 
-                                <th>Question</th>
+                                <th>Teacher</th>
 
-                                <th>Module</th>
+                                <th>Assigned Module</th>
 
-                                <th>Type</th>
+                                <th>Module Progress</th>
+
+                                <th>Attendance</th>
 
                                 <th>Status</th>
 
@@ -429,15 +439,15 @@ $projectName = 'LearnFlow';
                         <tbody>
 
 
-                            <!-- SAMPLE QUESTION 1 -->
+                            <!-- SAMPLE TEACHER 1 -->
 
                             <tr>
 
-                                <td>#Q001</td>
+                                <td>#T001</td>
 
                                 <td>
                                     <strong>
-                                        What is the purpose of this concept?
+                                        Teacher 1
                                     </strong>
                                 </td>
 
@@ -446,7 +456,11 @@ $projectName = 'LearnFlow';
                                 </td>
 
                                 <td>
-                                    MCQ
+                                    100%
+                                </td>
+
+                                <td>
+                                    95%
                                 </td>
 
                                 <td>
@@ -463,7 +477,7 @@ $projectName = 'LearnFlow';
                                             class="btn-secondary">
 
                                         <i class="fas fa-eye"></i>
-                                        View
+                                        Review
 
                                     </button>
 
@@ -473,59 +487,15 @@ $projectName = 'LearnFlow';
 
 
 
-                            <!-- SAMPLE QUESTION 2 -->
+                            <!-- SAMPLE TEACHER 2 -->
 
                             <tr>
 
-                                <td>#Q002</td>
+                                <td>#T002</td>
 
                                 <td>
                                     <strong>
-                                        Explain the main concept.
-                                    </strong>
-                                </td>
-
-                                <td>
-                                    Module 1
-                                </td>
-
-                                <td>
-                                    Short Answer
-                                </td>
-
-                                <td>
-
-                                    <span class="course-status active-status">
-                                        Active
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
-
-                                </td>
-
-                            </tr>
-
-
-
-                            <!-- SAMPLE QUESTION 3 -->
-
-                            <tr>
-
-                                <td>#Q003</td>
-
-                                <td>
-                                    <strong>
-                                        Describe the practical application.
+                                        Teacher 2
                                     </strong>
                                 </td>
 
@@ -534,7 +504,11 @@ $projectName = 'LearnFlow';
                                 </td>
 
                                 <td>
-                                    Essay
+                                    75%
+                                </td>
+
+                                <td>
+                                    90%
                                 </td>
 
                                 <td>
@@ -551,7 +525,7 @@ $projectName = 'LearnFlow';
                                             class="btn-secondary">
 
                                         <i class="fas fa-eye"></i>
-                                        View
+                                        Review
 
                                     </button>
 

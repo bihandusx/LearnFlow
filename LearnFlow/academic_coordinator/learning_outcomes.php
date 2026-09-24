@@ -11,7 +11,9 @@ $projectName = 'LearnFlow';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Question Bank</title>
+    <title>
+        <?php echo $projectName; ?> | Learning Outcomes
+    </title>
 
     <link rel="stylesheet" href="../css/teacher.css">
     <link rel="stylesheet" href="../css/coordinator.css">
@@ -31,9 +33,6 @@ $projectName = 'LearnFlow';
 
     <aside class="sidebar">
 
-
-        <!-- BRAND -->
-
         <div class="brand-panel">
 
             <div class="brand-icon">
@@ -41,21 +40,15 @@ $projectName = 'LearnFlow';
             </div>
 
             <div>
-
-                <p class="brand-label">
-                    LearnFlow
-                </p>
+                <p class="brand-label">LearnFlow</p>
 
                 <p class="brand-subtitle">
                     Academic Coordinator Portal
                 </p>
-
             </div>
 
         </div>
 
-
-        <!-- MENU -->
 
         <nav class="sidebar-menu">
 
@@ -144,14 +137,9 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <!-- ACTIVE PAGE -->
-
-            <a href="question_bank.php"
-               class="menu-link active">
-
+            <a href="question_bank.php" class="menu-link">
                 <i class="fas fa-question-circle"></i>
                 Question Bank
-
             </a>
 
 
@@ -167,9 +155,14 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <a href="learning_outcomes.php" class="menu-link">
+            <!-- ACTIVE PAGE -->
+
+            <a href="learning_outcomes.php"
+               class="menu-link active">
+
                 <i class="fas fa-graduation-cap"></i>
                 Learning Outcomes
+
             </a>
 
 
@@ -194,7 +187,7 @@ $projectName = 'LearnFlow';
 
 
 
-    <!-- ================= CONTENT ================= -->
+    <!-- ================= CONTENT AREA ================= -->
 
     <div class="content-area">
 
@@ -206,7 +199,6 @@ $projectName = 'LearnFlow';
 
             <div class="topbar-left">
 
-
                 <button class="mobile-menu-btn">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -215,15 +207,14 @@ $projectName = 'LearnFlow';
                 <div class="dashboard-title">
 
                     <p class="small-label">
-                        Content Quality Management
+                        Academic Reporting
                     </p>
 
                     <h1>
-                        Question Bank
+                        Learning Outcomes
                     </h1>
 
                 </div>
-
 
             </div>
 
@@ -244,11 +235,9 @@ $projectName = 'LearnFlow';
 
                 <div class="profile-chip">
 
-
                     <div class="avatar-placeholder">
                         <i class="fas fa-user-circle"></i>
                     </div>
-
 
                     <div>
 
@@ -259,7 +248,6 @@ $projectName = 'LearnFlow';
                         </strong>
 
                     </div>
-
 
                 </div>
 
@@ -280,31 +268,28 @@ $projectName = 'LearnFlow';
 
             <section class="page-intro-card">
 
-
                 <div>
 
                     <p class="card-label">
-                        Content Quality Management
+                        Academic Reporting
                     </p>
 
                     <h2>
-                        Question Bank
+                        Learning Outcomes
                     </h2>
 
                     <p>
-                        Maintain and organize academic questions
-                        for assessments within the course.
+                        Monitor student achievement against
+                        the expected learning outcomes of
+                        the course.
                     </p>
 
                 </div>
 
 
                 <div class="page-intro-icon">
-
-                    <i class="fas fa-question-circle"></i>
-
+                    <i class="fas fa-graduation-cap"></i>
                 </div>
-
 
             </section>
 
@@ -317,22 +302,14 @@ $projectName = 'LearnFlow';
 
                 <article class="mini-stat-card">
 
-
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-list"></i>
-
+                        <i class="fas fa-list-check"></i>
                     </div>
-
 
                     <div>
-
-                        <p>Total Questions</p>
-
-                        <h3>3</h3>
-
+                        <p>Total Learning Outcomes</p>
+                        <h3>4</h3>
                     </div>
-
 
                 </article>
 
@@ -340,22 +317,29 @@ $projectName = 'LearnFlow';
 
                 <article class="mini-stat-card">
 
-
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-layer-group"></i>
-
+                        <i class="fas fa-circle-check"></i>
                     </div>
-
 
                     <div>
-
-                        <p>Modules Covered</p>
-
+                        <p>Outcomes Achieved</p>
                         <h3>2</h3>
-
                     </div>
 
+                </article>
+
+
+
+                <article class="mini-stat-card">
+
+                    <div class="mini-stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+
+                    <div>
+                        <p>Overall Achievement</p>
+                        <h3>75%</h3>
+                    </div>
 
                 </article>
 
@@ -364,36 +348,25 @@ $projectName = 'LearnFlow';
 
 
 
-            <!-- QUESTION TABLE -->
+            <!-- LEARNING OUTCOME TABLE -->
 
             <section class="course-table-card">
 
 
                 <div class="course-table-heading">
 
-
                     <div>
 
                         <h2>
-                            Question Overview
+                            Learning Outcome Achievement
                         </h2>
 
                         <p>
-                            Review questions maintained for
-                            course assessments.
+                            Review student achievement for each
+                            expected learning outcome.
                         </p>
 
                     </div>
-
-
-                    <button type="button"
-                            class="btn-primary">
-
-                        <i class="fas fa-plus"></i>
-                        Add Question
-
-                    </button>
-
 
                 </div>
 
@@ -409,17 +382,15 @@ $projectName = 'LearnFlow';
 
                             <tr>
 
-                                <th>Question ID</th>
+                                <th>Outcome ID</th>
 
-                                <th>Question</th>
+                                <th>Learning Outcome</th>
 
-                                <th>Module</th>
+                                <th>Related Module</th>
 
-                                <th>Type</th>
+                                <th>Achievement Rate</th>
 
                                 <th>Status</th>
-
-                                <th>Action</th>
 
                             </tr>
 
@@ -429,15 +400,15 @@ $projectName = 'LearnFlow';
                         <tbody>
 
 
-                            <!-- SAMPLE QUESTION 1 -->
+                            <!-- SAMPLE OUTCOME 1 -->
 
                             <tr>
 
-                                <td>#Q001</td>
+                                <td>LO1</td>
 
                                 <td>
                                     <strong>
-                                        What is the purpose of this concept?
+                                        Understand fundamental concepts
                                     </strong>
                                 </td>
 
@@ -446,26 +417,14 @@ $projectName = 'LearnFlow';
                                 </td>
 
                                 <td>
-                                    MCQ
+                                    <strong>90%</strong>
                                 </td>
 
                                 <td>
 
                                     <span class="course-status active-status">
-                                        Active
+                                        Achieved
                                     </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
 
                                 </td>
 
@@ -473,59 +432,15 @@ $projectName = 'LearnFlow';
 
 
 
-                            <!-- SAMPLE QUESTION 2 -->
+                            <!-- SAMPLE OUTCOME 2 -->
 
                             <tr>
 
-                                <td>#Q002</td>
+                                <td>LO2</td>
 
                                 <td>
                                     <strong>
-                                        Explain the main concept.
-                                    </strong>
-                                </td>
-
-                                <td>
-                                    Module 1
-                                </td>
-
-                                <td>
-                                    Short Answer
-                                </td>
-
-                                <td>
-
-                                    <span class="course-status active-status">
-                                        Active
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
-
-                                </td>
-
-                            </tr>
-
-
-
-                            <!-- SAMPLE QUESTION 3 -->
-
-                            <tr>
-
-                                <td>#Q003</td>
-
-                                <td>
-                                    <strong>
-                                        Describe the practical application.
+                                        Apply theoretical knowledge
                                     </strong>
                                 </td>
 
@@ -534,26 +449,79 @@ $projectName = 'LearnFlow';
                                 </td>
 
                                 <td>
-                                    Essay
+                                    <strong>82%</strong>
                                 </td>
 
                                 <td>
 
                                     <span class="course-status active-status">
-                                        Active
+                                        Achieved
                                     </span>
 
                                 </td>
 
+                            </tr>
+
+
+
+                            <!-- SAMPLE OUTCOME 3 -->
+
+                            <tr>
+
+                                <td>LO3</td>
+
+                                <td>
+                                    <strong>
+                                        Demonstrate practical skills
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    Module 3
+                                </td>
+
+                                <td>
+                                    <strong>68%</strong>
+                                </td>
+
                                 <td>
 
-                                    <button type="button"
-                                            class="btn-secondary">
+                                    <span class="course-status">
+                                        In Progress
+                                    </span>
 
-                                        <i class="fas fa-eye"></i>
-                                        View
+                                </td>
 
-                                    </button>
+                            </tr>
+
+
+
+                            <!-- SAMPLE OUTCOME 4 -->
+
+                            <tr>
+
+                                <td>LO4</td>
+
+                                <td>
+                                    <strong>
+                                        Complete practical activities
+                                        independently
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    Module 4
+                                </td>
+
+                                <td>
+                                    <strong>60%</strong>
+                                </td>
+
+                                <td>
+
+                                    <span class="course-status">
+                                        In Progress
+                                    </span>
 
                                 </td>
 

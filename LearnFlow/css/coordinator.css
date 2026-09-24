@@ -582,3 +582,484 @@
     color: #dc2626;
 }
 
+/* =========================================
+   SIDEBAR SECTION TITLES
+   ========================================= */
+
+.menu-section-title {
+    margin: 22px 18px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    opacity: 0.55;
+}
+
+/* =========================================================
+   PROFESSIONAL COORDINATOR DASHBOARD
+========================================================= */
+
+
+/* WELCOME */
+
+.coordinator-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+
+    padding: 32px 36px;
+    margin-bottom: 24px;
+
+    background: linear-gradient(135deg, #ffffff, #f4f8ff);
+
+    border: 1px solid #dfe7f1;
+    border-radius: 20px;
+
+    box-shadow: 0 10px 30px rgba(30, 64, 175, 0.06);
+}
+
+.welcome-content h2 {
+    margin: 6px 0 8px;
+    font-size: 28px;
+    color: #102a43;
+}
+
+.welcome-content p:last-child {
+    max-width: 700px;
+    margin: 0;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+.welcome-icon {
+    width: 72px;
+    height: 72px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 20px;
+
+    background: #2458bd;
+    color: white;
+
+    font-size: 30px;
+}
+
+
+/* ================= OVERVIEW ================= */
+
+.dashboard-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+
+    margin-bottom: 36px;
+}
+
+.overview-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    padding: 20px;
+
+    background: white;
+
+    border: 1px solid #e1e7ef;
+    border-radius: 16px;
+
+    box-shadow: 0 5px 18px rgba(15, 23, 42, 0.04);
+}
+
+.overview-icon {
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 13px;
+
+    background: #edf4ff;
+    color: #2458bd;
+
+    font-size: 19px;
+}
+
+.overview-card p {
+    margin: 0 0 3px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.overview-card h3 {
+    margin: 0;
+    color: #102a43;
+    font-size: 24px;
+}
+
+.overview-card span {
+    display: block;
+    margin-top: 2px;
+
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+
+/* ================= FEATURE SECTIONS ================= */
+
+.dashboard-feature-section {
+    margin-bottom: 38px;
+}
+
+.feature-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    margin-bottom: 16px;
+}
+
+.section-heading-icon {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: #edf4ff;
+    color: #2458bd;
+}
+
+.feature-section-heading h2 {
+    margin: 0 0 3px;
+
+    color: #102a43;
+    font-size: 19px;
+}
+
+.feature-section-heading p {
+    margin: 0;
+
+    color: #7b8ba1;
+    font-size: 13px;
+}
+
+
+/* ================= FEATURE CARDS ================= */
+
+.professional-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.professional-feature-card {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    min-height: 110px;
+
+    padding: 20px;
+
+    background: #ffffff;
+
+    border: 1px solid #e1e7ef;
+    border-radius: 16px;
+
+    text-decoration: none;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.professional-feature-card:hover {
+    transform: translateY(-3px);
+
+    border-color: #b9cdf5;
+
+    box-shadow: 0 10px 25px rgba(37, 88, 189, 0.10);
+}
+
+.feature-icon {
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 13px;
+
+    background: #edf4ff;
+    color: #2458bd;
+
+    font-size: 19px;
+}
+
+.professional-feature-card h3 {
+    margin: 0 25px 5px 0;
+
+    color: #102a43;
+
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.professional-feature-card p {
+    margin: 0;
+
+    color: #718096;
+
+    font-size: 12.5px;
+    line-height: 1.45;
+}
+
+.feature-arrow {
+    position: absolute;
+
+    top: 50%;
+    right: 16px;
+
+    transform: translateY(-50%);
+
+    color: #a7b4c6;
+
+    font-size: 12px;
+
+    transition: 0.2s ease;
+}
+
+.professional-feature-card:hover .feature-arrow {
+    right: 13px;
+    color: #2458bd;
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1200px) {
+
+    .dashboard-overview-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .professional-feature-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+
+@media (max-width: 700px) {
+
+    .coordinator-welcome {
+        padding: 24px;
+    }
+
+    .welcome-icon {
+        display: none;
+    }
+
+    .dashboard-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .professional-feature-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+/* =========================================
+   DASHBOARD COLORS
+========================================= */
+
+/* Welcome */
+.coordinator-welcome {
+    background: linear-gradient(135deg, #ffffff, #edf4ff);
+    border: 1px solid #d8e5fa;
+}
+
+.welcome-icon {
+    background: #2563eb;
+    color: white;
+}
+
+
+/* ---------- TOP 4 STAT CARDS ---------- */
+
+/* Course - Blue */
+.overview-card:nth-child(1) .overview-icon {
+    background: #2563eb;
+    color: white;
+}
+
+/* Modules - Purple */
+.overview-card:nth-child(2) .overview-icon {
+    background: #7c3aed;
+    color: white;
+}
+
+/* Progress - Green */
+.overview-card:nth-child(3) .overview-icon {
+    background: #0f8a72;
+    color: white;
+}
+
+/* Pending - Orange */
+.overview-card:nth-child(4) .overview-icon {
+    background: #f97316;
+    color: white;
+}
+
+
+/* ---------- ALL FEATURE CARDS ---------- */
+
+.professional-feature-card:nth-child(1) .feature-icon {
+    background: #2563eb;
+    color: white;
+}
+
+.professional-feature-card:nth-child(2) .feature-icon {
+    background: #7c3aed;
+    color: white;
+}
+
+.professional-feature-card:nth-child(3) .feature-icon {
+    background: #0f8a72;
+    color: white;
+}
+
+.professional-feature-card:nth-child(4) .feature-icon {
+    background: #f97316;
+    color: white;
+}
+
+.professional-feature-card:nth-child(5) .feature-icon {
+    background: #dc2626;
+    color: white;
+}
+
+
+/* ---------- CARD HOVER ---------- */
+
+.professional-feature-card {
+    transition: 0.2s ease;
+}
+
+.professional-feature-card:hover {
+    transform: translateY(-4px);
+    border-color: #cbd8ec;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.10);
+}
+
+
+/* Make icons slightly larger on hover */
+
+.professional-feature-card:hover .feature-icon {
+    transform: scale(1.05);
+}
+
+
+/* Arrow becomes blue */
+
+.professional-feature-card:hover .feature-arrow {
+    color: #2563eb;
+}
+
+/* =========================================================
+   COORDINATOR BUTTONS
+========================================================= */
+
+/* Main Add button */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 10px 16px;
+
+    background: #2563eb;
+    color: #ffffff;
+
+    border: none;
+    border-radius: 9px;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.16);
+
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.22);
+}
+
+
+/* View / Review button */
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    padding: 8px 13px;
+
+    background: #eef4ff;
+    color: #2458bd;
+
+    border: 1px solid #d6e3fa;
+    border-radius: 8px;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: #dfeaff;
+    border-color: #b8cff7;
+    transform: translateY(-1px);
+}
+
+
+/* Icons inside buttons */
+.btn-primary i,
+.btn-secondary i {
+    font-size: 13px;
+}

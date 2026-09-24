@@ -9,13 +9,21 @@ $projectName = 'LearnFlow';
 <head>
 
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Question Bank</title>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
+    <title>
+        <?php echo $projectName; ?> | Examination Schedules
+    </title>
+
+    <!-- Base Dashboard CSS -->
     <link rel="stylesheet" href="../css/teacher.css">
+
+    <!-- Coordinator CSS -->
     <link rel="stylesheet" href="../css/coordinator.css">
 
+    <!-- Font Awesome -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -27,12 +35,14 @@ $projectName = 'LearnFlow';
 <div class="dashboard-shell">
 
 
-    <!-- ================= SIDEBAR ================= -->
+    <!-- =========================================
+         SIDEBAR
+         ========================================= -->
 
     <aside class="sidebar">
 
 
-        <!-- BRAND -->
+        <!-- LOGO -->
 
         <div class="brand-panel">
 
@@ -53,6 +63,7 @@ $projectName = 'LearnFlow';
             </div>
 
         </div>
+
 
 
         <!-- MENU -->
@@ -96,9 +107,14 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <a href="exam_schedules.php" class="menu-link">
+            <!-- ACTIVE PAGE -->
+
+            <a href="exam_schedules.php"
+               class="menu-link active">
+
                 <i class="fas fa-file-alt"></i>
                 Examination Schedules
+
             </a>
 
 
@@ -144,14 +160,9 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <!-- ACTIVE PAGE -->
-
-            <a href="question_bank.php"
-               class="menu-link active">
-
+            <a href="question_bank.php" class="menu-link">
                 <i class="fas fa-question-circle"></i>
                 Question Bank
-
             </a>
 
 
@@ -190,11 +201,14 @@ $projectName = 'LearnFlow';
 
         </nav>
 
+
     </aside>
 
 
 
-    <!-- ================= CONTENT ================= -->
+    <!-- =========================================
+         CONTENT AREA
+         ========================================= -->
 
     <div class="content-area">
 
@@ -215,11 +229,11 @@ $projectName = 'LearnFlow';
                 <div class="dashboard-title">
 
                     <p class="small-label">
-                        Content Quality Management
+                        Academic Planning
                     </p>
 
                     <h1>
-                        Question Bank
+                        Examination Schedules
                     </h1>
 
                 </div>
@@ -271,7 +285,9 @@ $projectName = 'LearnFlow';
 
 
 
-        <!-- ================= MAIN ================= -->
+        <!-- =========================================
+             MAIN CONTENT
+             ========================================= -->
 
         <main class="dashboard-main">
 
@@ -284,16 +300,16 @@ $projectName = 'LearnFlow';
                 <div>
 
                     <p class="card-label">
-                        Content Quality Management
+                        Academic Planning
                     </p>
 
                     <h2>
-                        Question Bank
+                        Examination Schedules
                     </h2>
 
                     <p>
-                        Maintain and organize academic questions
-                        for assessments within the course.
+                        Plan and manage examination schedules
+                        for courses in LearnFlow.
                     </p>
 
                 </div>
@@ -301,7 +317,7 @@ $projectName = 'LearnFlow';
 
                 <div class="page-intro-icon">
 
-                    <i class="fas fa-question-circle"></i>
+                    <i class="fas fa-file-alt"></i>
 
                 </div>
 
@@ -320,16 +336,16 @@ $projectName = 'LearnFlow';
 
                     <div class="mini-stat-icon">
 
-                        <i class="fas fa-list"></i>
+                        <i class="fas fa-file-lines"></i>
 
                     </div>
 
 
                     <div>
 
-                        <p>Total Questions</p>
+                        <p>Total Examinations</p>
 
-                        <h3>3</h3>
+                        <h3>2</h3>
 
                     </div>
 
@@ -343,14 +359,14 @@ $projectName = 'LearnFlow';
 
                     <div class="mini-stat-icon">
 
-                        <i class="fas fa-layer-group"></i>
+                        <i class="fas fa-clock"></i>
 
                     </div>
 
 
                     <div>
 
-                        <p>Modules Covered</p>
+                        <p>Upcoming Examinations</p>
 
                         <h3>2</h3>
 
@@ -364,7 +380,7 @@ $projectName = 'LearnFlow';
 
 
 
-            <!-- QUESTION TABLE -->
+            <!-- EXAMINATION TABLE -->
 
             <section class="course-table-card">
 
@@ -375,22 +391,21 @@ $projectName = 'LearnFlow';
                     <div>
 
                         <h2>
-                            Question Overview
+                            Examination Schedule Overview
                         </h2>
 
                         <p>
-                            Review questions maintained for
-                            course assessments.
+                            View and manage scheduled examinations.
                         </p>
 
                     </div>
 
-
+<br>
                     <button type="button"
                             class="btn-primary">
 
                         <i class="fas fa-plus"></i>
-                        Add Question
+                        Add Examination
 
                     </button>
 
@@ -409,13 +424,17 @@ $projectName = 'LearnFlow';
 
                             <tr>
 
-                                <th>Question ID</th>
+                                <th>Exam ID</th>
 
-                                <th>Question</th>
+                                <th>Course</th>
 
-                                <th>Module</th>
+                                <th>Examination</th>
 
-                                <th>Type</th>
+                                <th>Date</th>
+
+                                <th>Time</th>
+
+                                <th>Venue</th>
 
                                 <th>Status</th>
 
@@ -429,30 +448,36 @@ $projectName = 'LearnFlow';
                         <tbody>
 
 
-                            <!-- SAMPLE QUESTION 1 -->
+                            <!-- SAMPLE EXAM 1 -->
 
                             <tr>
 
-                                <td>#Q001</td>
+                                <td>#E001</td>
 
                                 <td>
-                                    <strong>
-                                        What is the purpose of this concept?
-                                    </strong>
+                                    Object Oriented Programming
                                 </td>
 
                                 <td>
-                                    Module 1
+                                    Final Examination
                                 </td>
 
                                 <td>
-                                    MCQ
+                                    2026-10-10
+                                </td>
+
+                                <td>
+                                    09:00 AM
+                                </td>
+
+                                <td>
+                                    Hall A
                                 </td>
 
                                 <td>
 
                                     <span class="course-status active-status">
-                                        Active
+                                        Scheduled
                                     </span>
 
                                 </td>
@@ -461,10 +486,7 @@ $projectName = 'LearnFlow';
 
                                     <button type="button"
                                             class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
                                         View
-
                                     </button>
 
                                 </td>
@@ -473,30 +495,36 @@ $projectName = 'LearnFlow';
 
 
 
-                            <!-- SAMPLE QUESTION 2 -->
+                            <!-- SAMPLE EXAM 2 -->
 
                             <tr>
 
-                                <td>#Q002</td>
+                                <td>#E002</td>
 
                                 <td>
-                                    <strong>
-                                        Explain the main concept.
-                                    </strong>
+                                    Database Systems
                                 </td>
 
                                 <td>
-                                    Module 1
+                                    Final Examination
                                 </td>
 
                                 <td>
-                                    Short Answer
+                                    2026-10-14
+                                </td>
+
+                                <td>
+                                    01:00 PM
+                                </td>
+
+                                <td>
+                                    Hall B
                                 </td>
 
                                 <td>
 
                                     <span class="course-status active-status">
-                                        Active
+                                        Scheduled
                                     </span>
 
                                 </td>
@@ -505,54 +533,7 @@ $projectName = 'LearnFlow';
 
                                     <button type="button"
                                             class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
                                         View
-
-                                    </button>
-
-                                </td>
-
-                            </tr>
-
-
-
-                            <!-- SAMPLE QUESTION 3 -->
-
-                            <tr>
-
-                                <td>#Q003</td>
-
-                                <td>
-                                    <strong>
-                                        Describe the practical application.
-                                    </strong>
-                                </td>
-
-                                <td>
-                                    Module 2
-                                </td>
-
-                                <td>
-                                    Essay
-                                </td>
-
-                                <td>
-
-                                    <span class="course-status active-status">
-                                        Active
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
                                     </button>
 
                                 </td>

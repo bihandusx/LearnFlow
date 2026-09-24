@@ -11,7 +11,7 @@ $projectName = 'LearnFlow';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Courses</title>
+    <title><?php echo $projectName; ?> | Academic Schedules</title>
 
     <link rel="stylesheet" href="../css/teacher.css">
     <link rel="stylesheet" href="../css/coordinator.css">
@@ -29,7 +29,14 @@ $projectName = 'LearnFlow';
 
     <!-- ================= SIDEBAR ================= -->
 
+    <!-- ==========================================
+         SIDEBAR
+         ========================================== -->
+
     <aside class="sidebar">
+
+
+        <!-- LOGO -->
 
         <div class="brand-panel">
 
@@ -38,7 +45,10 @@ $projectName = 'LearnFlow';
             </div>
 
             <div>
-                <p class="brand-label">LearnFlow</p>
+                <p class="brand-label">
+                    LearnFlow
+                </p>
+
                 <p class="brand-subtitle">
                     Academic Coordinator Portal
                 </p>
@@ -47,7 +57,9 @@ $projectName = 'LearnFlow';
         </div>
 
 
-  <nav class="sidebar-menu">
+
+        <!-- MENU -->
+          <nav class="sidebar-menu">
 
     <a href="dashboard.php" class="menu-link">
         <i class="fas fa-tachometer-alt"></i>
@@ -59,13 +71,12 @@ $projectName = 'LearnFlow';
         Profile
     </a>
 
-    <a href="courses.php" class="menu-link active">
+    <a href="courses.php" class="menu-link">
         <i class="fas fa-book-open"></i>
         Courses
     </a>
 
-
-    <a href="academic_schedules.php" class="menu-link">
+    <a href="academic_schedules.php" class="menu-link active">
         <i class="fas fa-calendar-alt"></i>
         Academic Schedules
     </a>
@@ -151,7 +162,13 @@ $projectName = 'LearnFlow';
     </a>
 
 </nav>
-</aside>
+
+        
+
+    </aside>
+
+
+
 
     <!-- ================= CONTENT ================= -->
 
@@ -170,11 +187,8 @@ $projectName = 'LearnFlow';
 
                 <div class="dashboard-title">
 
-                    <p class="small-label">
-                        Academic Management
-                    </p>
-
-                    <h1>Courses</h1>
+                    <p class="small-label">Academic Planning</p>
+                    <h1>Academic Schedules</h1>
 
                 </div>
 
@@ -219,161 +233,113 @@ $projectName = 'LearnFlow';
 
 
             <!-- PAGE INFORMATION -->
-
             <section class="page-intro-card">
 
-                <div>
+    <div>
+        <p class="card-label">Academic Planning</p>
 
-                    <p class="card-label">
-                     Course Coordination 
-                    </p>
-                    <h2>Course Overview</h2>
+        <h2>Academic Schedules</h2>
 
-                    <p>
-                     View and monitor the academic course delivered through LearnFlow.
-                    </p>
+        <p>
+            Create and manage academic schedules for courses.
+        </p>
+    </div>
 
-                </div>
+    <div class="page-intro-icon">
+        <i class="fas fa-calendar-alt"></i>
+    </div>
 
-                <div class="page-intro-icon">
-                    <i class="fas fa-book-open"></i>
-                </div>
+</section>
 
-            </section>
 
+<section class="course-summary-grid">
 
+    <article class="mini-stat-card">
 
-            <!-- COURSE SUMMARY -->
+        <div class="mini-stat-icon">
+            <i class="fas fa-calendar"></i>
+        </div>
 
-            <section class="course-summary-grid">
+        <div>
+            <p>Total Schedules</p>
+            <h3>0</h3>
+        </div>
 
+    </article>
 
-                <article class="mini-stat-card">
 
-                    <div class="mini-stat-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
+    <article class="mini-stat-card">
 
-                    <div>
-                        <p>Total Courses</p>
-                        <h3>1</h3>
-                    </div>
+        <div class="mini-stat-icon">
+            <i class="fas fa-circle-check"></i>
+        </div>
 
-                </article>
+        <div>
+            <p>Upcoming Classes</p>
+            <h3>0</h3>
+        </div>
 
+    </article>
 
-                <article class="mini-stat-card">
+</section>
 
-                    <div class="mini-stat-icon">
-                        <i class="fas fa-circle-check"></i>
-                    </div>
 
-                    <div>
-                        <p>Active Courses</p>
-                        <h3>1</h3>
-                    </div>
+<section class="course-table-card">
 
-                </article>
+    <div class="course-table-heading">
 
+        <div>
+            <h2>Academic Schedule Overview</h2>
 
-                <article class="mini-stat-card">
+            <p>
+                Create and manage academic schedules for courses.
+            </p>
+        </div>
+<br>
+        <button class="btn-primary">
+        <i class="fas fa-plus"></i>
+        Add Schedule
+    </button>
 
-                    <div class="mini-stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
+    </div>
 
-                    <div>
-                        <p>Current Batches</p>
-                        <h3>1</h3>
-                    </div>
 
-                </article>
+    <div class="table-responsive">
 
+        <table class="coordinator-table">
 
-            </section>
+<thead>
+    <tr>
+        <th>Schedule ID</th>
+        <th>Course</th>
+        <th>Teacher</th>
+        <th>Date</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Location</th>
+        <th>Status</th>
+    </tr>
+</thead>
 
+            <tbody>
 
+                <tbody>
 
-            <!-- COURSE TABLE -->
+    <tr>
+        <td colspan="8" style="text-align:center;">
+            No academic schedules available.
+        </td>
+    </tr>
 
-            <section class="course-table-card">
+</tbody>
 
+            </tbody>
 
-                <div class="course-table-heading">
+        </table>
 
-                    <div>
+    </div>
 
-                        <h2>Course Overview</h2>
-
-                        <p>
-                            Academic courses currently available
-                            in the system.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-
-                <div class="table-responsive">
-
-
-                    <table class="coordinator-table">
-
-
-                        <thead>
-
-                        <tr>
-                            <th>Course ID</th>
-                            <th>Course Name</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                        </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-
-                        <!-- UI sample data -->
-
-                        <tr>
-
-                            <td>#001</td>
-
-                            <td>
-                                <strong>
-                                    Web Development
-                                </strong>
-                            </td>
-
-                            <td>
-                                Web development course
-                            </td>
-
-                            <td>
-
-                                <span class="course-status active-status">
-                                    Active
-                                </span>
-
-                            </td>
-
-                        </tr>
-
-
-                        </tbody>
-
-
-                    </table>
-
-
-                </div>
-
-
-            </section>
+</section>
 
 
         </main>

@@ -11,7 +11,9 @@ $projectName = 'LearnFlow';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Question Bank</title>
+    <title>
+        <?php echo $projectName; ?> | Content Standards
+    </title>
 
     <link rel="stylesheet" href="../css/teacher.css">
     <link rel="stylesheet" href="../css/coordinator.css">
@@ -31,9 +33,6 @@ $projectName = 'LearnFlow';
 
     <aside class="sidebar">
 
-
-        <!-- BRAND -->
-
         <div class="brand-panel">
 
             <div class="brand-icon">
@@ -41,21 +40,15 @@ $projectName = 'LearnFlow';
             </div>
 
             <div>
-
-                <p class="brand-label">
-                    LearnFlow
-                </p>
+                <p class="brand-label">LearnFlow</p>
 
                 <p class="brand-subtitle">
                     Academic Coordinator Portal
                 </p>
-
             </div>
 
         </div>
 
-
-        <!-- MENU -->
 
         <nav class="sidebar-menu">
 
@@ -138,20 +131,20 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <a href="content_standards.php" class="menu-link">
+            <!-- ACTIVE PAGE -->
+
+            <a href="content_standards.php"
+               class="menu-link active">
+
                 <i class="fas fa-check-circle"></i>
                 Content Standards
+
             </a>
 
 
-            <!-- ACTIVE PAGE -->
-
-            <a href="question_bank.php"
-               class="menu-link active">
-
+            <a href="question_bank.php" class="menu-link">
                 <i class="fas fa-question-circle"></i>
                 Question Bank
-
             </a>
 
 
@@ -194,7 +187,7 @@ $projectName = 'LearnFlow';
 
 
 
-    <!-- ================= CONTENT ================= -->
+    <!-- ================= CONTENT AREA ================= -->
 
     <div class="content-area">
 
@@ -205,7 +198,6 @@ $projectName = 'LearnFlow';
 
 
             <div class="topbar-left">
-
 
                 <button class="mobile-menu-btn">
                     <i class="fas fa-bars"></i>
@@ -219,11 +211,10 @@ $projectName = 'LearnFlow';
                     </p>
 
                     <h1>
-                        Question Bank
+                        Content Standards
                     </h1>
 
                 </div>
-
 
             </div>
 
@@ -244,11 +235,9 @@ $projectName = 'LearnFlow';
 
                 <div class="profile-chip">
 
-
                     <div class="avatar-placeholder">
                         <i class="fas fa-user-circle"></i>
                     </div>
-
 
                     <div>
 
@@ -259,7 +248,6 @@ $projectName = 'LearnFlow';
                         </strong>
 
                     </div>
-
 
                 </div>
 
@@ -280,7 +268,6 @@ $projectName = 'LearnFlow';
 
             <section class="page-intro-card">
 
-
                 <div>
 
                     <p class="card-label">
@@ -288,23 +275,21 @@ $projectName = 'LearnFlow';
                     </p>
 
                     <h2>
-                        Question Bank
+                        Course Content Standards
                     </h2>
 
                     <p>
-                        Maintain and organize academic questions
-                        for assessments within the course.
+                        Review course modules and learning
+                        materials to ensure academic content
+                        standards are maintained.
                     </p>
 
                 </div>
 
 
                 <div class="page-intro-icon">
-
-                    <i class="fas fa-question-circle"></i>
-
+                    <i class="fas fa-check-circle"></i>
                 </div>
-
 
             </section>
 
@@ -317,22 +302,14 @@ $projectName = 'LearnFlow';
 
                 <article class="mini-stat-card">
 
-
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-list"></i>
-
+                        <i class="fas fa-layer-group"></i>
                     </div>
-
 
                     <div>
-
-                        <p>Total Questions</p>
-
-                        <h3>3</h3>
-
+                        <p>Total Modules</p>
+                        <h3>4</h3>
                     </div>
-
 
                 </article>
 
@@ -340,22 +317,29 @@ $projectName = 'LearnFlow';
 
                 <article class="mini-stat-card">
 
-
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-layer-group"></i>
-
+                        <i class="fas fa-circle-check"></i>
                     </div>
-
 
                     <div>
-
-                        <p>Modules Covered</p>
-
-                        <h3>2</h3>
-
+                        <p>Standards Met</p>
+                        <h3>3</h3>
                     </div>
 
+                </article>
+
+
+
+                <article class="mini-stat-card">
+
+                    <div class="mini-stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+
+                    <div>
+                        <p>Pending Review</p>
+                        <h3>1</h3>
+                    </div>
 
                 </article>
 
@@ -364,36 +348,25 @@ $projectName = 'LearnFlow';
 
 
 
-            <!-- QUESTION TABLE -->
+            <!-- CONTENT STANDARD TABLE -->
 
             <section class="course-table-card">
 
 
                 <div class="course-table-heading">
 
-
                     <div>
 
                         <h2>
-                            Question Overview
+                            Content Quality Overview
                         </h2>
 
                         <p>
-                            Review questions maintained for
-                            course assessments.
+                            Monitor whether course content meets
+                            the required academic standards.
                         </p>
 
                     </div>
-
-
-                    <button type="button"
-                            class="btn-primary">
-
-                        <i class="fas fa-plus"></i>
-                        Add Question
-
-                    </button>
-
 
                 </div>
 
@@ -409,15 +382,15 @@ $projectName = 'LearnFlow';
 
                             <tr>
 
-                                <th>Question ID</th>
-
-                                <th>Question</th>
-
                                 <th>Module</th>
 
-                                <th>Type</th>
+                                <th>Learning Materials</th>
 
-                                <th>Status</th>
+                                <th>Learning Objectives</th>
+
+                                <th>Content Accuracy</th>
+
+                                <th>Overall Status</th>
 
                                 <th>Action</th>
 
@@ -429,30 +402,30 @@ $projectName = 'LearnFlow';
                         <tbody>
 
 
-                            <!-- SAMPLE QUESTION 1 -->
+                            <!-- SAMPLE MODULE 1 -->
 
                             <tr>
 
-                                <td>#Q001</td>
-
                                 <td>
-                                    <strong>
-                                        What is the purpose of this concept?
-                                    </strong>
+                                    <strong>Module 1</strong>
                                 </td>
 
                                 <td>
-                                    Module 1
+                                    Available
                                 </td>
 
                                 <td>
-                                    MCQ
+                                    Defined
+                                </td>
+
+                                <td>
+                                    Reviewed
                                 </td>
 
                                 <td>
 
                                     <span class="course-status active-status">
-                                        Active
+                                        Standards Met
                                     </span>
 
                                 </td>
@@ -473,30 +446,30 @@ $projectName = 'LearnFlow';
 
 
 
-                            <!-- SAMPLE QUESTION 2 -->
+                            <!-- SAMPLE MODULE 2 -->
 
                             <tr>
 
-                                <td>#Q002</td>
-
                                 <td>
-                                    <strong>
-                                        Explain the main concept.
-                                    </strong>
+                                    <strong>Module 2</strong>
                                 </td>
 
                                 <td>
-                                    Module 1
+                                    Available
                                 </td>
 
                                 <td>
-                                    Short Answer
+                                    Defined
+                                </td>
+
+                                <td>
+                                    Reviewed
                                 </td>
 
                                 <td>
 
                                     <span class="course-status active-status">
-                                        Active
+                                        Standards Met
                                     </span>
 
                                 </td>
@@ -517,30 +490,74 @@ $projectName = 'LearnFlow';
 
 
 
-                            <!-- SAMPLE QUESTION 3 -->
+                            <!-- SAMPLE MODULE 3 -->
 
                             <tr>
 
-                                <td>#Q003</td>
-
                                 <td>
-                                    <strong>
-                                        Describe the practical application.
-                                    </strong>
+                                    <strong>Module 3</strong>
                                 </td>
 
                                 <td>
-                                    Module 2
+                                    Available
                                 </td>
 
                                 <td>
-                                    Essay
+                                    Defined
+                                </td>
+
+                                <td>
+                                    Pending
+                                </td>
+
+                                <td>
+
+                                    <span class="course-status">
+                                        Pending Review
+                                    </span>
+
+                                </td>
+
+                                <td>
+
+                                    <button type="button"
+                                            class="btn-secondary">
+
+                                        <i class="fas fa-eye"></i>
+                                        Review
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+
+
+                            <!-- SAMPLE MODULE 4 -->
+
+                            <tr>
+
+                                <td>
+                                    <strong>Module 4</strong>
+                                </td>
+
+                                <td>
+                                    Available
+                                </td>
+
+                                <td>
+                                    Defined
+                                </td>
+
+                                <td>
+                                    Reviewed
                                 </td>
 
                                 <td>
 
                                     <span class="course-status active-status">
-                                        Active
+                                        Standards Met
                                     </span>
 
                                 </td>

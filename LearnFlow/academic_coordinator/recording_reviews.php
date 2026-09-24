@@ -11,7 +11,9 @@ $projectName = 'LearnFlow';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title><?php echo $projectName; ?> | Question Bank</title>
+    <title>
+        <?php echo $projectName; ?> | Recording Reviews
+    </title>
 
     <link rel="stylesheet" href="../css/teacher.css">
     <link rel="stylesheet" href="../css/coordinator.css">
@@ -31,9 +33,6 @@ $projectName = 'LearnFlow';
 
     <aside class="sidebar">
 
-
-        <!-- BRAND -->
-
         <div class="brand-panel">
 
             <div class="brand-icon">
@@ -41,21 +40,15 @@ $projectName = 'LearnFlow';
             </div>
 
             <div>
-
-                <p class="brand-label">
-                    LearnFlow
-                </p>
+                <p class="brand-label">LearnFlow</p>
 
                 <p class="brand-subtitle">
                     Academic Coordinator Portal
                 </p>
-
             </div>
 
         </div>
 
-
-        <!-- MENU -->
 
         <nav class="sidebar-menu">
 
@@ -132,9 +125,14 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <a href="recording_reviews.php" class="menu-link">
+            <!-- ACTIVE PAGE -->
+
+            <a href="recording_reviews.php"
+               class="menu-link active">
+
                 <i class="fas fa-video"></i>
                 Recording Reviews
+
             </a>
 
 
@@ -144,14 +142,9 @@ $projectName = 'LearnFlow';
             </a>
 
 
-            <!-- ACTIVE PAGE -->
-
-            <a href="question_bank.php"
-               class="menu-link active">
-
+            <a href="question_bank.php" class="menu-link">
                 <i class="fas fa-question-circle"></i>
                 Question Bank
-
             </a>
 
 
@@ -206,7 +199,6 @@ $projectName = 'LearnFlow';
 
             <div class="topbar-left">
 
-
                 <button class="mobile-menu-btn">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -219,11 +211,10 @@ $projectName = 'LearnFlow';
                     </p>
 
                     <h1>
-                        Question Bank
+                        Recording Reviews
                     </h1>
 
                 </div>
-
 
             </div>
 
@@ -244,11 +235,9 @@ $projectName = 'LearnFlow';
 
                 <div class="profile-chip">
 
-
                     <div class="avatar-placeholder">
                         <i class="fas fa-user-circle"></i>
                     </div>
-
 
                     <div>
 
@@ -259,7 +248,6 @@ $projectName = 'LearnFlow';
                         </strong>
 
                     </div>
-
 
                 </div>
 
@@ -280,7 +268,6 @@ $projectName = 'LearnFlow';
 
             <section class="page-intro-card">
 
-
                 <div>
 
                     <p class="card-label">
@@ -288,23 +275,21 @@ $projectName = 'LearnFlow';
                     </p>
 
                     <h2>
-                        Question Bank
+                        Review Uploaded Recordings
                     </h2>
 
                     <p>
-                        Maintain and organize academic questions
-                        for assessments within the course.
+                        Review course recordings uploaded by
+                        teachers before they are made available
+                        to students.
                     </p>
 
                 </div>
 
 
                 <div class="page-intro-icon">
-
-                    <i class="fas fa-question-circle"></i>
-
+                    <i class="fas fa-video"></i>
                 </div>
-
 
             </section>
 
@@ -317,22 +302,14 @@ $projectName = 'LearnFlow';
 
                 <article class="mini-stat-card">
 
-
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-list"></i>
-
+                        <i class="fas fa-video"></i>
                     </div>
-
 
                     <div>
-
-                        <p>Total Questions</p>
-
-                        <h3>3</h3>
-
+                        <p>Total Recordings</p>
+                        <h3>5</h3>
                     </div>
-
 
                 </article>
 
@@ -340,22 +317,29 @@ $projectName = 'LearnFlow';
 
                 <article class="mini-stat-card">
 
-
                     <div class="mini-stat-icon">
-
-                        <i class="fas fa-layer-group"></i>
-
+                        <i class="fas fa-clock"></i>
                     </div>
-
 
                     <div>
-
-                        <p>Modules Covered</p>
-
+                        <p>Pending Review</p>
                         <h3>2</h3>
-
                     </div>
 
+                </article>
+
+
+
+                <article class="mini-stat-card">
+
+                    <div class="mini-stat-icon">
+                        <i class="fas fa-circle-check"></i>
+                    </div>
+
+                    <div>
+                        <p>Approved</p>
+                        <h3>3</h3>
+                    </div>
 
                 </article>
 
@@ -364,36 +348,25 @@ $projectName = 'LearnFlow';
 
 
 
-            <!-- QUESTION TABLE -->
+            <!-- RECORDING TABLE -->
 
             <section class="course-table-card">
 
 
                 <div class="course-table-heading">
 
-
                     <div>
 
                         <h2>
-                            Question Overview
+                            Recording Review Overview
                         </h2>
 
                         <p>
-                            Review questions maintained for
-                            course assessments.
+                            Review recordings uploaded for
+                            modules within the course.
                         </p>
 
                     </div>
-
-
-                    <button type="button"
-                            class="btn-primary">
-
-                        <i class="fas fa-plus"></i>
-                        Add Question
-
-                    </button>
-
 
                 </div>
 
@@ -409,13 +382,15 @@ $projectName = 'LearnFlow';
 
                             <tr>
 
-                                <th>Question ID</th>
+                                <th>Recording ID</th>
 
-                                <th>Question</th>
+                                <th>Recording Title</th>
 
                                 <th>Module</th>
 
-                                <th>Type</th>
+                                <th>Teacher</th>
+
+                                <th>Upload Date</th>
 
                                 <th>Status</th>
 
@@ -429,15 +404,15 @@ $projectName = 'LearnFlow';
                         <tbody>
 
 
-                            <!-- SAMPLE QUESTION 1 -->
+                            <!-- SAMPLE RECORDING 1 -->
 
                             <tr>
 
-                                <td>#Q001</td>
+                                <td>#R001</td>
 
                                 <td>
                                     <strong>
-                                        What is the purpose of this concept?
+                                        Introduction Lecture
                                     </strong>
                                 </td>
 
@@ -446,13 +421,17 @@ $projectName = 'LearnFlow';
                                 </td>
 
                                 <td>
-                                    MCQ
+                                    Teacher 1
+                                </td>
+
+                                <td>
+                                    2026-09-20
                                 </td>
 
                                 <td>
 
-                                    <span class="course-status active-status">
-                                        Active
+                                    <span class="course-status">
+                                        Pending
                                     </span>
 
                                 </td>
@@ -463,7 +442,7 @@ $projectName = 'LearnFlow';
                                             class="btn-secondary">
 
                                         <i class="fas fa-eye"></i>
-                                        View
+                                        Review
 
                                     </button>
 
@@ -473,59 +452,15 @@ $projectName = 'LearnFlow';
 
 
 
-                            <!-- SAMPLE QUESTION 2 -->
+                            <!-- SAMPLE RECORDING 2 -->
 
                             <tr>
 
-                                <td>#Q002</td>
+                                <td>#R002</td>
 
                                 <td>
                                     <strong>
-                                        Explain the main concept.
-                                    </strong>
-                                </td>
-
-                                <td>
-                                    Module 1
-                                </td>
-
-                                <td>
-                                    Short Answer
-                                </td>
-
-                                <td>
-
-                                    <span class="course-status active-status">
-                                        Active
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    <button type="button"
-                                            class="btn-secondary">
-
-                                        <i class="fas fa-eye"></i>
-                                        View
-
-                                    </button>
-
-                                </td>
-
-                            </tr>
-
-
-
-                            <!-- SAMPLE QUESTION 3 -->
-
-                            <tr>
-
-                                <td>#Q003</td>
-
-                                <td>
-                                    <strong>
-                                        Describe the practical application.
+                                        Module Concepts
                                     </strong>
                                 </td>
 
@@ -534,13 +469,17 @@ $projectName = 'LearnFlow';
                                 </td>
 
                                 <td>
-                                    Essay
+                                    Teacher 2
+                                </td>
+
+                                <td>
+                                    2026-09-18
                                 </td>
 
                                 <td>
 
                                     <span class="course-status active-status">
-                                        Active
+                                        Approved
                                     </span>
 
                                 </td>
@@ -552,6 +491,54 @@ $projectName = 'LearnFlow';
 
                                         <i class="fas fa-eye"></i>
                                         View
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+
+
+                            <!-- SAMPLE RECORDING 3 -->
+
+                            <tr>
+
+                                <td>#R003</td>
+
+                                <td>
+                                    <strong>
+                                        Practical Session
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    Module 2
+                                </td>
+
+                                <td>
+                                    Teacher 2
+                                </td>
+
+                                <td>
+                                    2026-09-22
+                                </td>
+
+                                <td>
+
+                                    <span class="course-status">
+                                        Pending
+                                    </span>
+
+                                </td>
+
+                                <td>
+
+                                    <button type="button"
+                                            class="btn-secondary">
+
+                                        <i class="fas fa-eye"></i>
+                                        Review
 
                                     </button>
 
